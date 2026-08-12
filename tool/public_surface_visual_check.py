@@ -43,6 +43,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 RAW_REPOSITORY_URL = (
     "https://raw.githubusercontent.com/braven-pvm/braven_charts/master/"
 )
+LOCAL_REPOSITORY_URL = "/repo/"
 VIEWPORTS = {
     "phone": (390, 844),
     "tablet": (768, 1024),
@@ -366,6 +367,15 @@ def _render_readme(preview_dir: Path) -> tuple[Path, list[dict]]:
     target = preview_dir / "readme.html"
     target.write_text(html, encoding="utf-8")
     return target, media_report
+
+
+def _localize_api_repository_media(api_index: Path) -> None:
+    """Make dartdoc render media from the checked-out revision under review."""
+
+    source = api_index.read_text(encoding="utf-8")
+    localized = source.replace(RAW_REPOSITORY_URL, LOCAL_REPOSITORY_URL)
+    if localized != source:
+        api_index.write_text(localized, encoding="utf-8")
 
 
 def _find_chrome() -> str | None:
@@ -1172,6 +1182,8 @@ def main() -> int:
         )
     if not args.skip_public_docs_check:
         _run_public_docs_check()
+
+    _localize_api_repository_media(api_index)
 
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)

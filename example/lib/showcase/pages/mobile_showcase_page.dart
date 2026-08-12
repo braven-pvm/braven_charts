@@ -687,6 +687,48 @@ class _MobileChartBackdropPainter extends CustomPainter {
           start += sweep;
         }
         break;
+      case ChartType.radar:
+        final center = Offset(size.width * 0.52, size.height * 0.52);
+        final radius = size.shortestSide * 0.38;
+        const values = [0.88, 0.58, 0.76, 0.48, 0.82, 0.66];
+        for (final fraction in const [0.33, 0.66, 1.0]) {
+          final web = Path();
+          for (var index = 0; index < values.length; index++) {
+            final angle = -math.pi / 2 + math.pi * 2 * index / values.length;
+            final point =
+                center +
+                Offset(math.cos(angle), math.sin(angle)) * radius * fraction;
+            index == 0
+                ? web.moveTo(point.dx, point.dy)
+                : web.lineTo(point.dx, point.dy);
+          }
+          web.close();
+          canvas.drawPath(
+            web,
+            stroke
+              ..color = color.withValues(alpha: 0.18)
+              ..strokeWidth = 1,
+          );
+        }
+        final profile = Path();
+        for (var index = 0; index < values.length; index++) {
+          final angle = -math.pi / 2 + math.pi * 2 * index / values.length;
+          final point =
+              center +
+              Offset(math.cos(angle), math.sin(angle)) * radius * values[index];
+          index == 0
+              ? profile.moveTo(point.dx, point.dy)
+              : profile.lineTo(point.dx, point.dy);
+        }
+        profile.close();
+        canvas.drawPath(profile, fill..color = color.withValues(alpha: 0.20));
+        canvas.drawPath(
+          profile,
+          stroke
+            ..color = color
+            ..strokeWidth = 2.4,
+        );
+        break;
       case null:
         break;
     }
@@ -1449,6 +1491,7 @@ class _MobileChartExample {
     this.grid,
     this.xAxisConfig,
     this.yAxis,
+    this.radarChartConfig,
     this.concentricDonutConfig,
     this.polarChartConfig,
     this.radialBarChartConfig,
@@ -1467,6 +1510,7 @@ class _MobileChartExample {
   final GridConfig? grid;
   final XAxisConfig? xAxisConfig;
   final YAxisConfig? yAxis;
+  final RadarChartConfig? radarChartConfig;
   final ConcentricDonutConfig? concentricDonutConfig;
   final PolarChartConfig? polarChartConfig;
   final RadialBarChartConfig? radialBarChartConfig;
@@ -1628,10 +1672,15 @@ class _MobileChartCard extends StatelessWidget {
     final isRadial =
         chartType.type == ChartType.pie ||
         chartType.type == ChartType.donut ||
+        chartType.type == ChartType.radar ||
         chartType.type == ChartType.polarColumn ||
         chartType.type == ChartType.radialBar ||
         chartType.type == ChartType.gauge;
     final showAxes = chartChrome == _MobileChartChrome.axes;
+    final showLegend =
+        example.showLegend &&
+        chartChrome != _MobileChartChrome.clean &&
+        chartType.type != ChartType.radar;
     final axisLineColor = presentation.palette[index % 5];
     final axisLabelColor = presentation.palette[(index + 1) % 5];
     final axisTitleColor = presentation.palette[(index + 2) % 5];
@@ -1670,6 +1719,19 @@ class _MobileChartCard extends StatelessWidget {
         },
       ),
     );
+    final legendStyle =
+        example.legendStyle ??
+        chartTheme.legendStyle.copyWith(
+          position: LegendPosition.topRight,
+          orientation: LegendOrientation.horizontal,
+          textStyle: chartTheme.legendStyle.textStyle.copyWith(
+            color: presentation.onSurfaceVariant,
+          ),
+          backgroundColor: presentation.surface.withValues(alpha: 0.92),
+          borderColor: presentation.border.withValues(alpha: 0.72),
+          borderWidth: 0.75,
+          allowDragging: false,
+        );
     final xAxisConfig =
         example.xAxisConfig ??
         (isRadial
@@ -1887,15 +1949,8 @@ class _MobileChartCard extends StatelessWidget {
                 series: example.series,
                 annotations: example.annotations,
                 theme: chartTheme,
-                showLegend: example.showLegend,
-                legendStyle: example.showLegend
-                    ? example.legendStyle ??
-                          const LegendStyle(
-                            position: LegendPosition.topRight,
-                            orientation: LegendOrientation.horizontal,
-                            allowDragging: false,
-                          )
-                    : null,
+                showLegend: showLegend,
+                legendStyle: showLegend ? legendStyle : null,
                 radialLegendItemBuilder: example.radialLegendItemBuilder,
                 grid: effectiveGrid,
                 xAxisConfig: showAxes
@@ -1910,6 +1965,8 @@ class _MobileChartCard extends StatelessWidget {
                   enableHaptics: enableHaptics,
                   enablePanInertia: enablePanInertia,
                 ),
+                radarChartConfig:
+                    example.radarChartConfig ?? const RadarChartConfig(),
                 concentricDonutConfig:
                     example.concentricDonutConfig ??
                     (chartType.slug == 'concentric-donut'
@@ -2087,6 +2144,21 @@ const _mobileExampleCopy = <String, List<(String, String)>>{
       'Four independent completion rings form a compact progress dashboard.',
     ),
   ],
+  'radar-charts': [
+    (
+      'Budget vs spending',
+      'Allocated and actual spending share six departmental dimensions.',
+    ),
+    ('Capability profile', 'Three teams share one circular capability scale.'),
+    (
+      'Service health',
+      'Eight operational dimensions exercise dense category labels.',
+    ),
+    (
+      'Delivery balance',
+      'Two delivery profiles compare quality, speed, and resilience.',
+    ),
+  ],
   'polar-column': [
     (
       'Activity rhythm',
@@ -2184,6 +2256,9 @@ List<_MobileChartExample> _mobileExamples(
             (slug == 'polar-column' && index > 0),
         xAxisConfig: _mobileXAxis(slug, index),
         yAxis: _mobileYAxis(slug, index),
+        radarChartConfig: slug == 'radar-charts'
+            ? _mobileRadarConfig(index)
+            : null,
         concentricDonutConfig: slug == 'concentric-donut'
             ? _mobileConcentricConfig(index)
             : null,
@@ -2210,6 +2285,7 @@ List<_MobileChartExample> _mobileExamples(
           ('heatmap-charts', _) => 300,
           ('pie-charts', 1) => 330,
           ('concentric-donut', _) => 310,
+          ('radar-charts', _) => 340,
           ('polar-column', _) => 310,
           ('gauge-charts', _) => 310,
           _ => null,
@@ -2491,6 +2567,10 @@ List<String> _mobileBadges(String slug, int index) => switch ((slug, index)) {
     'Independent progress',
     'Shared centre',
   ],
+  ('radar-charts', 0) => const ['Polygon web', '2 profiles', '6 dimensions'],
+  ('radar-charts', 1) => const ['Circular web', '3 profiles', 'Shared scale'],
+  ('radar-charts', 2) => const ['8 dimensions', 'Point values', 'Dense labels'],
+  ('radar-charts', 3) => const ['Polygon web', '2 profiles', 'Balanced view'],
   ('polar-column', 0) => const ['Rose', 'Category colour', '7 sectors'],
   ('polar-column', 1) => const ['Layered', 'Capacity track', 'Observed values'],
   ('polar-column', 2) => const ['Grouped', '3 series', 'Shared categories'],
@@ -2645,6 +2725,24 @@ ConcentricDonutConfig _mobileConcentricConfig(int index) => switch (index) {
     ),
   ),
 };
+
+RadarChartConfig _mobileRadarConfig(int index) => RadarChartConfig(
+  pane: PolarPaneConfig(
+    startAngleDegrees: index == 3 ? -54 : -90,
+    outerRadiusFactor: 0.98,
+  ),
+  categoryAxis: const RadarCategoryAxisConfig(
+    labelOffset: 6,
+    maximumVisibleLabels: 10,
+    labelStyle: PolarLabelStyle(fontSize: 9, fontWeight: FontWeight.w600),
+  ),
+  radialAxis: RadarNumericAxisConfig(
+    maximum: 100,
+    tickCount: index == 2 ? 4 : 5,
+    showLabels: false,
+    gridShape: index == 1 ? RadarGridShape.circle : RadarGridShape.polygon,
+  ),
+);
 
 PolarChartConfig _mobilePolarConfig(int index) => switch (index) {
   0 => const PolarChartConfig(
@@ -2947,6 +3045,7 @@ List<ChartSeries> _mobileSeries(
       ),
     ),
   ],
+  'radar-charts' => _mobileRadarSeries(0, presentation),
   'polar-column' => [
     PolarColumnChartSeries.rose(
       id: 'mobile-polar-column',
@@ -3503,11 +3602,90 @@ List<ChartSeries> _mobileVariantSeries(
     ),
   ],
   'concentric-donut' => _concentricSeries(variant, presentation),
+  'radar-charts' => _mobileRadarSeries(variant, presentation),
   'polar-column' => _mobilePolarSeries(variant, presentation),
   'radial-bar' => [_mobileRadialBarSeries(variant, presentation)],
   'gauge-charts' => [_mobileGaugeSeries(variant, presentation)],
   _ => const <ChartSeries>[],
 };
+
+List<RadarChartSeries> _mobileRadarSeries(
+  int variant,
+  _MobileStylePresentation presentation,
+) {
+  final categories = switch (variant) {
+    0 => const [
+      'Sales',
+      'Marketing',
+      'Development',
+      'Support',
+      'Technology',
+      'Administration',
+    ],
+    1 => const [
+      'Discovery',
+      'Delivery',
+      'Quality',
+      'Collaboration',
+      'Reliability',
+      'Learning',
+    ],
+    2 => const [
+      'Availability',
+      'Latency',
+      'Throughput',
+      'Recovery',
+      'Security',
+      'Coverage',
+      'Automation',
+      'Satisfaction',
+    ],
+    _ => const ['Speed', 'Quality', 'Scope', 'Resilience', 'Learning'],
+  };
+  final profiles = switch (variant) {
+    0 => const [
+      ('Allocated', [78, 64, 82, 58, 46, 42]),
+      ('Actual', [69, 78, 74, 52, 38, 31]),
+    ],
+    1 => const [
+      ('North', [84, 72, 78, 66, 80, 70]),
+      ('Central', [68, 86, 72, 82, 64, 76]),
+      ('South', [74, 64, 88, 70, 72, 82]),
+    ],
+    2 => const [
+      ('Current', [88, 66, 74, 62, 82, 76, 58, 72]),
+      ('Target', [94, 84, 86, 82, 92, 88, 80, 90]),
+    ],
+    _ => const [
+      ('Current', [76, 82, 68, 72, 64]),
+      ('Next', [84, 88, 78, 86, 76]),
+    ],
+  };
+
+  return [
+    for (final (profileIndex, profile) in profiles.indexed)
+      RadarChartSeries.fromMap(
+        id: 'mobile-radar-$variant-$profileIndex',
+        name: profile.$1,
+        unit: '%',
+        color: presentation.palette[profileIndex % presentation.palette.length],
+        values: {
+          for (var index = 0; index < categories.length; index++)
+            categories[index]: profile.$2[index],
+        },
+        radarStyle: RadarSeriesStyle(
+          strokeWidth: profileIndex == 0 ? 2.5 : 2,
+          strokeDashPattern: profileIndex == 1 && variant != 2
+              ? const [5, 4]
+              : const [],
+          fillOpacity: profileIndex == 0 ? 0.15 : 0.08,
+          showMarkers: true,
+          markerRadius: 2.8,
+          showDataLabels: variant == 2 && profileIndex == 0,
+        ),
+      ),
+  ];
+}
 
 RadialBarChartSeries _mobileRadialBarSeries(
   int variant,

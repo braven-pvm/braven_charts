@@ -99,6 +99,39 @@ void main() {
     expect(find.text('Forecast interval'), findsNothing);
   });
 
+  testWidgets('direct ChartLegend honors its configured text style', (
+    tester,
+  ) async {
+    const labelColor = Color(0xFFE2E8F0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChartLegend(
+            series: const [
+              LineChartSeries(
+                id: 'observed',
+                name: 'Observed',
+                points: [ChartDataPoint(x: 0, y: 42)],
+              ),
+            ],
+            hiddenSeriesIds: const {},
+            onSeriesToggle: (_) {},
+            textStyle: const TextStyle(
+              color: labelColor,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final label = tester.widget<Text>(find.text('Observed'));
+    expect(label.style?.color, labelColor);
+    expect(label.style?.fontSize, 9);
+    expect(label.style?.fontWeight, FontWeight.w600);
+  });
+
   testWidgets('explicit canvas legend omits opted-out series completely', (
     tester,
   ) async {

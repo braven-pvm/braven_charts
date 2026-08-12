@@ -13,6 +13,7 @@ import '../../models/chart_series.dart';
 import '../../models/bar_chart_style.dart';
 import '../../models/chart_theme.dart';
 import '../../models/interaction_config.dart';
+import '../../models/radar_chart_series.dart';
 import '../../models/series_axis_binding.dart';
 import '../../models/y_axis_config.dart';
 import '../../utils/text_direction_resolver.dart';
@@ -30,6 +31,36 @@ import 'tooltip_animator.dart';
 /// testability of tooltip rendering logic.
 class TooltipRenderer {
   const TooltipRenderer();
+
+  /// Builds one category-centric Radar tooltip across every opted-in profile.
+  String? buildRadarCategoryTooltipText({
+    required ChartDataHit dataHit,
+    required List<ChartElement> elements,
+  }) {
+    final category = dataHit.category;
+    if (category == null) return null;
+    final sourceIsRadar = elements.whereType<DataHitElement>().any(
+      (element) =>
+          element.id == dataHit.seriesId && element.series is RadarChartSeries,
+    );
+    if (!sourceIsRadar) return null;
+
+    final lines = <String>[category];
+    for (final element in elements.whereType<DataHitElement>()) {
+      final series = element.series;
+      if (series is! RadarChartSeries || !series.showInTrackingTooltip) {
+        continue;
+      }
+      final pointIndex = series.points.indexWhere(
+        (point) => point.label?.trim() == category,
+      );
+      if (pointIndex < 0) continue;
+      final hit = element.dataHitForPointIndex(pointIndex);
+      if (hit == null) continue;
+      lines.add('${series.name ?? series.id}: ${hit.formattedValue}');
+    }
+    return lines.length > 1 ? lines.join('\n') : null;
+  }
 
   /// Builds the renderer-neutral tooltip body for one resolved datum.
   ///
@@ -193,12 +224,14 @@ class TooltipRenderer {
       unit: yUnit,
     );
 
-    final baseTooltipText = buildBaseTooltipText(
-      dataHit: dataHit,
-      seriesName: seriesName,
-      formattedCartesianY: formattedY,
-      formatDataValue: formatDataValue,
-    );
+    final baseTooltipText =
+        buildRadarCategoryTooltipText(dataHit: dataHit, elements: elements) ??
+        buildBaseTooltipText(
+          dataHit: dataHit,
+          seriesName: seriesName,
+          formattedCartesianY: formattedY,
+          formatDataValue: formatDataValue,
+        );
     final barSeries = dataElement.series is BarChartSeries
         ? dataElement.series as BarChartSeries
         : null;

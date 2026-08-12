@@ -6,6 +6,7 @@ import 'package:braven_charts_example/showcase/widgets/gallery_flagships.dart';
 import 'package:braven_charts_example/showcase/widgets/pie_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/polar_column_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/radial_bar_gallery_cards.dart';
+import 'package:braven_charts_example/showcase/widgets/radar_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/gauge_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/range_area_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/scatter_gallery_cards.dart';
@@ -145,14 +146,14 @@ void main() {
       );
 
       await tester.scrollUntilVisible(
-        find.text('Thirteen chart guides, grouped by visual grammar'),
+        find.text('14 chart guides, grouped by visual grammar'),
         600,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
-        find.text('Thirteen chart guides, grouped by visual grammar'),
+        find.text('14 chart guides, grouped by visual grammar'),
         findsOneWidget,
       );
       expect(
@@ -174,6 +175,10 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('chart-type-card-radial-bar')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('chart-type-card-radar')),
         findsOneWidget,
       );
       expect(
@@ -474,6 +479,22 @@ void main() {
     expect(find.byType(ConcentricMixGalleryCard), findsOneWidget);
     expect(find.byType(ConcentricHealthGalleryCard), findsOneWidget);
     expect(find.byType(ConcentricPortfolioGalleryCard), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Three aligned profiles on one shared radial scale'),
+      500,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      find.byKey(const ValueKey('gallery-radar-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-radar-compositions'), 3);
+    expect(find.byType(BudgetComparisonRadarGalleryCard), findsOneWidget);
+    expect(find.byType(CapabilityRadarGalleryCard), findsOneWidget);
+    expect(find.byType(ServiceHealthRadarGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('Three views of cyclical magnitude'),

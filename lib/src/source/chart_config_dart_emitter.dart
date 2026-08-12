@@ -60,6 +60,8 @@ import '../models/radial_bar_chart_config.dart';
 import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/radar_chart_config.dart';
+import '../models/radar_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
 import '../models/range_area_style.dart';
@@ -341,6 +343,24 @@ class ChartConfigDartEmitter {
     PolarChartConfig config,
   ) => _emitPolarChartConfigArgument(writer, argument, config);
 
+  /// Writes `<argument>: RadarSeriesStyle(...)`, using the same renderer as
+  /// the configuration source form. Writes nothing for the family default
+  /// unless [ChartDartSourceOptions.includeDefaultValues] is enabled.
+  void emitRadarSeriesStyle(
+    DartSourceWriter writer,
+    String argument,
+    RadarSeriesStyle style,
+  ) => _emitRadarSeriesStyle(writer, argument, style);
+
+  /// Writes the `RadarChartConfig(...)` expression used by
+  /// `.radarConfig(...)`. When [argument] is non-null the expression is emitted
+  /// as a named argument, matching the configuration source form.
+  void emitRadarChartConfig(
+    DartSourceWriter writer,
+    String? argument,
+    RadarChartConfig config,
+  ) => _emitRadarChartConfigArgument(writer, argument, config);
+
   /// Writes `<argument>: ConcentricDonutConfig(...)` — the literal the grammar
   /// chain hands to `geomDonut(concentric: ...)`, rendered by the same code the
   /// config form's `concentricDonutConfig:` uses. Unconditional: the caller
@@ -435,6 +455,9 @@ class ChartConfigDartEmitter {
       }
       if (configuration.polarChartConfig case final polarConfig?) {
         _emitPolarChartConfigArgument(body, 'polarChartConfig', polarConfig);
+      }
+      if (configuration.radarChartConfig case final radarConfig?) {
+        _emitRadarChartConfigArgument(body, 'radarChartConfig', radarConfig);
       }
       if (configuration.radialBarChartConfig case final radialBarConfig?) {
         _emitRadialBarChartConfig(body, radialBarConfig);
@@ -592,6 +615,7 @@ class ChartConfigDartEmitter {
       PieChartSeries() => 'PieChartSeries',
       DonutChartSeries() => 'DonutChartSeries',
       PolarColumnChartSeries() => 'PolarColumnChartSeries',
+      RadarChartSeries() => 'RadarChartSeries',
       RadialBarChartSeries() => 'RadialBarChartSeries',
       ChartSeries() => 'ChartSeries',
     };
@@ -614,6 +638,7 @@ class ChartConfigDartEmitter {
         );
       }
       if (series is! PolarColumnChartSeries &&
+          series is! RadarChartSeries &&
           series is! RadialBarChartSeries &&
           series is! CandlestickChartSeries &&
           series is! RangeAreaChartSeries &&
@@ -625,8 +650,10 @@ class ChartConfigDartEmitter {
           defaultValue: series is PieChartSeries || series is DonutChartSeries,
         );
       }
-      _optionalString(writer, 'yAxisId', series.yAxisId);
-      if (series.yAxisConfig != null) {
+      if (series is! RadarChartSeries) {
+        _optionalString(writer, 'yAxisId', series.yAxisId);
+      }
+      if (series is! RadarChartSeries && series.yAxisConfig != null) {
         _emitYAxis(writer, 'yAxisConfig', series.yAxisConfig!);
       }
       _optionalString(writer, 'unit', series.unit);
@@ -717,6 +744,8 @@ class ChartConfigDartEmitter {
           _emitDonutOptions(writer, series, seriesIndex);
         case PolarColumnChartSeries():
           _emitPolarColumnOptions(writer, series);
+        case RadarChartSeries():
+          _emitRadarSeriesStyle(writer, 'radarStyle', series.radarStyle);
         case RadialBarChartSeries():
           _emitRadialBarOptions(writer, series);
         case ChartSeries():
@@ -3148,6 +3177,107 @@ class ChartConfigDartEmitter {
     }
   }
 
+  void _emitRadarSeriesStyle(
+    DartSourceWriter writer,
+    String argument,
+    RadarSeriesStyle style,
+  ) {
+    if (!options.includeDefaultValues && style == const RadarSeriesStyle()) {
+      return;
+    }
+    writer.writeLine('$argument: RadarSeriesStyle(');
+    writer.indented(() {
+      _numberIf(writer, 'strokeWidth', style.strokeWidth, 2);
+      _numberIf(writer, 'strokeOpacity', style.strokeOpacity, 1);
+      if (options.includeDefaultValues || style.strokeDashPattern.isNotEmpty) {
+        writer.namedArgument(
+          'strokeDashPattern',
+          '<double>[${style.strokeDashPattern.map(DartSourceWriter.numberLiteral).join(', ')}]',
+        );
+      }
+      _optionalColor(writer, 'fillColor', style.fillColor);
+      _numberIf(writer, 'fillOpacity', style.fillOpacity, 0.12);
+      if (style.gradient case final gradient?) {
+        writer.writeLine('gradient: RadarGradientStyle(');
+        writer.indented(() {
+          _valueIf(writer, 'enabled', gradient.enabled, defaultValue: true);
+          _enumIf(
+            writer,
+            'type',
+            'RadarGradientType',
+            gradient.type.name,
+            defaultName: 'radial',
+          );
+          _optionalColor(writer, 'startColor', gradient.startColor);
+          _optionalColor(writer, 'endColor', gradient.endColor);
+          _numberIf(
+            writer,
+            'startLightnessShift',
+            gradient.startLightnessShift,
+            0.2,
+          );
+          _numberIf(
+            writer,
+            'endLightnessShift',
+            gradient.endLightnessShift,
+            -0.14,
+          );
+          _numberIf(writer, 'angleDegrees', gradient.angleDegrees, 0);
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          style.shadow != const RadarShadowStyle()) {
+        writer.writeLine('shadow: RadarShadowStyle(');
+        writer.indented(() {
+          _optionalColor(writer, 'color', style.shadow.color);
+          _numberIf(writer, 'blurRadius', style.shadow.blurRadius, 0);
+          _numberIf(writer, 'spreadRadius', style.shadow.spreadRadius, 0);
+          _offsetIf(writer, 'offset', style.shadow.offset, Offset.zero);
+          _numberIf(writer, 'opacity', style.shadow.opacity, 0.28);
+        });
+        writer.writeLine('),');
+      }
+      _valueIf(writer, 'showMarkers', style.showMarkers, defaultValue: true);
+      _enumIf(
+        writer,
+        'markerShape',
+        'SeriesMarkerShape',
+        style.markerShape.name,
+        defaultName: 'circle',
+      );
+      _numberIf(writer, 'markerRadius', style.markerRadius, 3);
+      _optionalColor(writer, 'markerFillColor', style.markerFillColor);
+      _optionalColor(writer, 'markerBorderColor', style.markerBorderColor);
+      _numberIf(writer, 'markerBorderWidth', style.markerBorderWidth, 0);
+      _valueIf(
+        writer,
+        'showDataLabels',
+        style.showDataLabels,
+        defaultValue: false,
+      );
+      _valueIf(
+        writer,
+        'maximumVisibleDataLabels',
+        style.maximumVisibleDataLabels,
+        defaultValue: 24,
+      );
+      _numberIf(writer, 'dataLabelOffset', style.dataLabelOffset, 8);
+      if (options.includeDefaultValues ||
+          style.dataLabelStyle != const PolarLabelStyle()) {
+        _emitPolarLabelStyle(writer, 'dataLabelStyle', style.dataLabelStyle);
+      }
+      _enumIf(
+        writer,
+        'animationMode',
+        'RadarAnimationMode',
+        style.animationMode.name,
+        defaultName: 'none',
+      );
+    });
+    writer.writeLine('),');
+  }
+
   /// Writes `<argument>: PolarColumnTargetMarkerStyle(...)` — the appearance of
   /// a polar column's per-category target markers — or nothing when [style] is
   /// the default (unless `includeDefaultValues`).
@@ -3868,6 +3998,184 @@ class ChartConfigDartEmitter {
           }
         });
         writer.writeLine('],');
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitRadarChartConfigArgument(
+    DartSourceWriter writer,
+    String? argument,
+    RadarChartConfig config,
+  ) {
+    writer.writeLine(
+      argument == null ? 'RadarChartConfig(' : '$argument: RadarChartConfig(',
+    );
+    writer.indented(() {
+      if (options.includeDefaultValues ||
+          config.pane != const PolarPaneConfig()) {
+        writer.writeLine('pane: PolarPaneConfig(');
+        writer.indented(() {
+          _numberIf(
+            writer,
+            'startAngleDegrees',
+            config.pane.startAngleDegrees,
+            -90,
+          );
+          _numberIf(
+            writer,
+            'sweepAngleDegrees',
+            config.pane.sweepAngleDegrees,
+            360,
+          );
+          _valueIf(
+            writer,
+            'clockwise',
+            config.pane.clockwise,
+            defaultValue: true,
+          );
+          _numberIf(
+            writer,
+            'innerRadiusFactor',
+            config.pane.innerRadiusFactor,
+            0,
+          );
+          _numberIf(
+            writer,
+            'outerRadiusFactor',
+            config.pane.outerRadiusFactor,
+            0.88,
+          );
+          _valueIf(
+            writer,
+            'clipMarks',
+            config.pane.clipMarks,
+            defaultValue: true,
+          );
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          config.categoryAxis != const RadarCategoryAxisConfig()) {
+        writer.writeLine('categoryAxis: RadarCategoryAxisConfig(');
+        writer.indented(() {
+          _valueIf(
+            writer,
+            'showLabels',
+            config.categoryAxis.showLabels,
+            defaultValue: true,
+          );
+          _valueIf(
+            writer,
+            'showSpokes',
+            config.categoryAxis.showSpokes,
+            defaultValue: true,
+          );
+          _numberIf(
+            writer,
+            'maximumVisibleLabels',
+            config.categoryAxis.maximumVisibleLabels,
+            24,
+          );
+          _numberIf(writer, 'labelOffset', config.categoryAxis.labelOffset, 8);
+          if (options.includeDefaultValues ||
+              config.categoryAxis.labelStyle != const PolarLabelStyle()) {
+            _emitPolarLabelStyle(
+              writer,
+              'labelStyle',
+              config.categoryAxis.labelStyle,
+            );
+          }
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          config.radialAxis != const RadarNumericAxisConfig()) {
+        writer.writeLine('radialAxis: RadarNumericAxisConfig(');
+        writer.indented(() {
+          _numberIf(writer, 'minimum', config.radialAxis.minimum, 0);
+          _optionalNumber(writer, 'maximum', config.radialAxis.maximum);
+          _numberIf(writer, 'tickCount', config.radialAxis.tickCount, 5);
+          _valueIf(
+            writer,
+            'showLabels',
+            config.radialAxis.showLabels,
+            defaultValue: true,
+          );
+          _valueIf(
+            writer,
+            'showGridLines',
+            config.radialAxis.showGridLines,
+            defaultValue: true,
+          );
+          _enumIf(
+            writer,
+            'gridShape',
+            'RadarGridShape',
+            config.radialAxis.gridShape.name,
+            defaultName: 'polygon',
+          );
+          _enumIf(
+            writer,
+            'labelPosition',
+            'PolarRadialLabelPosition',
+            config.radialAxis.labelPosition.name,
+            defaultName: 'start',
+          );
+          _numberIf(
+            writer,
+            'labelAngleOffsetDegrees',
+            config.radialAxis.labelAngleOffsetDegrees,
+            0,
+          );
+          _numberIf(writer, 'labelOffset', config.radialAxis.labelOffset, 4);
+          if (options.includeDefaultValues ||
+              config.radialAxis.labelStyle !=
+                  const PolarLabelStyle(fontSize: 10)) {
+            _emitPolarLabelStyle(
+              writer,
+              'labelStyle',
+              config.radialAxis.labelStyle,
+            );
+          }
+        });
+        writer.writeLine('),');
+      }
+      if (options.includeDefaultValues ||
+          config.webStyle != const RadarWebStyle()) {
+        writer.writeLine('webStyle: RadarWebStyle(');
+        writer.indented(() {
+          _optionalColor(writer, 'ringColor', config.webStyle.ringColor);
+          _optionalNumber(writer, 'ringWidth', config.webStyle.ringWidth);
+          _optionalNumberList(
+            writer,
+            'ringDashPattern',
+            config.webStyle.ringDashPattern,
+          );
+          _optionalColor(writer, 'spokeColor', config.webStyle.spokeColor);
+          _optionalNumber(writer, 'spokeWidth', config.webStyle.spokeWidth);
+          _optionalNumberList(
+            writer,
+            'spokeDashPattern',
+            config.webStyle.spokeDashPattern,
+          );
+          _optionalColor(
+            writer,
+            'boundaryColor',
+            config.webStyle.boundaryColor,
+          );
+          _optionalNumber(
+            writer,
+            'boundaryWidth',
+            config.webStyle.boundaryWidth,
+          );
+          _optionalNumberList(
+            writer,
+            'boundaryDashPattern',
+            config.webStyle.boundaryDashPattern,
+          );
+        });
+        writer.writeLine('),');
       }
     });
     writer.writeLine('),');

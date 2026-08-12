@@ -34,6 +34,7 @@ import 'pages/performance_page.dart';
 import 'pages/pie_charts_page.dart';
 import 'pages/polar_column_page.dart';
 import 'pages/radial_bar_page.dart';
+import 'pages/radar_charts_page.dart';
 import 'pages/range_area_charts_page.dart';
 import 'pages/scientific_page.dart';
 import 'pages/selection_showcase_page.dart';
@@ -371,6 +372,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     'pie-charts' => const PieChartsPage(),
     'donut-charts' => const DonutChartsPage(),
     'concentric-donut' => const ConcentricDonutPage(),
+    'radar-charts' => const RadarChartsPage(),
     'polar-column' => const PolarColumnPage(),
     'radial-bar' => const RadialBarPage(),
     'gauge-charts' => const GaugeChartsPage(),

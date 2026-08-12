@@ -63,7 +63,7 @@ void main() {
       find.byKey(const ValueKey('chart-type-radial-grid')),
       findsOneWidget,
     );
-    expect(showcaseChartTypes, hasLength(13));
+    expect(showcaseChartTypes, hasLength(14));
     expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(3));
     for (final family in ['Pie', 'Donut', 'Concentric Donut']) {
       expect(find.text(family), findsOneWidget);
@@ -81,6 +81,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('chart-type-polar-grid')), findsOneWidget);
     expect(find.text('Polar Column'), findsOneWidget);
+    expect(find.text('Radar'), findsOneWidget);
     expect(find.text('Radial Bar'), findsOneWidget);
     expect(find.text('Gauge'), findsOneWidget);
   });
@@ -141,6 +142,10 @@ void main() {
       const Offset(0, -700),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('chart-type-card-radar')));
+    await tester.pump();
+    expect(selectedSlug, 'radar-charts');
+
     await tester.tap(
       find.byKey(const ValueKey('chart-type-card-polar-column')),
     );

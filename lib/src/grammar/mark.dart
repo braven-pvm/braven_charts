@@ -34,6 +34,7 @@ import '../models/polar_column_chart_series.dart'
         PolarColumnPreset,
         PolarColumnStyle,
         PolarColumnTargetMarkerStyle;
+import '../models/radar_chart_config.dart' show RadarSeriesStyle;
 import '../models/radial_category_series.dart' show RadialSliceGroupingConfig;
 import '../models/radial_selection_style.dart' show RadialSelectionStyle;
 import '../models/range_area_style.dart'
@@ -54,7 +55,7 @@ import 'channel.dart';
 ///
 /// Cartesian geometries — [LineMark], [AreaMark], [BarMark], [ScatterMark],
 /// [HeatmapMark], [CandlestickMark] and [TrendMark] — plus the radial
-/// [RadialMark] family ([PieMark], [DonutMark], [PolarMark]). A spec is either
+/// [RadialMark] family ([PieMark], [DonutMark], [PolarMark], [RadarMark]). A spec is either
 /// Cartesian or radial:
 /// a [RadialMark] lowers through the radial branch of `spec.lower()`, may share
 /// the spec with no other mark, and honors no Cartesian axis/grid option.
@@ -1940,4 +1941,46 @@ final class PolarMark<T> extends RadialMark<T> {
   @override
   String toString() =>
       'PolarMark(id: $id, name: $name, preset: ${preset.name})';
+}
+
+/// A Radar/Spider profile: categories own equally spaced spokes and [value]
+/// owns radial distance on the plot's shared numeric scale.
+///
+/// Several Radar marks may share one plot. Their category accessors must
+/// resolve to the same visible identities in the same authored order; the
+/// lowering validates that shared composition before rendering.
+final class RadarMark<T> extends RadialMark<T> {
+  /// Creates a Radar profile geometry.
+  const RadarMark({
+    required super.category,
+    required super.value,
+    super.id,
+    super.name,
+    super.color,
+    super.unit,
+    this.style,
+  });
+
+  /// Portable stroke, fill, marker, label, and motion presentation.
+  /// Null lowers to `const RadarSeriesStyle()`.
+  final RadarSeriesStyle? style;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RadarMark<T> &&
+          other.category == category &&
+          other.value == value &&
+          other.id == id &&
+          other.name == name &&
+          other.color == color &&
+          other.unit == unit &&
+          other.style == style;
+
+  @override
+  int get hashCode =>
+      Object.hash(category, value, id, name, color, unit, style);
+
+  @override
+  String toString() => 'RadarMark(id: $id, name: $name)';
 }

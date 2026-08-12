@@ -203,6 +203,8 @@ export 'src/models/pie_chart_config.dart';
 export 'src/models/pie_chart_series.dart';
 export 'src/models/polar_chart_config.dart';
 export 'src/models/polar_column_chart_series.dart';
+export 'src/models/radar_chart_config.dart';
+export 'src/models/radar_chart_series.dart';
 export 'src/models/radial_bar_chart_config.dart';
 export 'src/models/radial_bar_chart_series.dart';
 export 'src/models/radial_category_series.dart';

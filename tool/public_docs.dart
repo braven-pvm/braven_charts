@@ -229,8 +229,8 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
   if (features.length != 6) {
     errors.add('features must contain exactly 6 evergreen groups.');
   }
-  if (families.length != 13) {
-    errors.add('chartFamilies must contain exactly 13 built-in families.');
+  if (families.length != 14) {
+    errors.add('chartFamilies must contain exactly 14 built-in families.');
   }
   _validateFamilyCountCopy(root, families, errors);
   if (gallery.length < 12 || gallery.length > 24) {

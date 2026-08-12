@@ -254,6 +254,12 @@ _inlineEncodeSources = <String, List<List<String>>>{
   'PolarNumericAxisConfig': [
     [_configFile, 'encodePolarChart'],
   ],
+  'RadarCategoryAxisConfig': [
+    [_configFile, 'encodeRadarChart'],
+  ],
+  'RadarNumericAxisConfig': [
+    [_configFile, 'encodeRadarChart'],
+  ],
   'PolarColumnCompositionConfig': [
     [_configFile, 'encodePolarChart'],
   ],
@@ -307,6 +313,7 @@ const List<String> _seriesClasses = <String>[
   'PieChartSeries',
   'DonutChartSeries',
   'PolarColumnChartSeries',
+  'RadarChartSeries',
   'RadialBarChartSeries',
   'GaugeChartSeries',
 ];

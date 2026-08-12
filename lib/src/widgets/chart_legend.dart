@@ -79,6 +79,7 @@ class ChartLegend extends StatelessWidget {
     this.borderRadius = const BorderRadius.all(Radius.circular(8.0)),
     this.showBorder = true,
     this.borderColor,
+    this.textStyle,
   });
 
   /// List of all series to display in the legend.
@@ -120,6 +121,11 @@ class ChartLegend extends StatelessWidget {
 
   /// Color of the legend border. Defaults to theme's divider color.
   final Color? borderColor;
+
+  /// Text style applied to every series label.
+  ///
+  /// When omitted, the surrounding Material theme supplies the label style.
+  final TextStyle? textStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -183,11 +189,11 @@ class ChartLegend extends StatelessWidget {
               // Series name
               Text(
                 _getSeriesName(series),
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                style: (textStyle ?? const TextStyle()).copyWith(
+                  fontSize: textStyle?.fontSize ?? 13,
+                  fontWeight: textStyle?.fontWeight ?? FontWeight.w500,
                   decoration: isHidden ? TextDecoration.lineThrough : null,
-                  color: isHidden ? Colors.grey : null,
+                  color: isHidden ? Colors.grey : textStyle?.color,
                 ),
               ),
             ],

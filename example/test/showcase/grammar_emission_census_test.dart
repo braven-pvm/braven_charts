@@ -54,6 +54,7 @@ import 'package:braven_charts_example/showcase/pages/gauge_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/heatmap_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/pie_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
+import 'package:braven_charts_example/showcase/pages/radar_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/radial_bar_page.dart';
 import 'package:braven_charts_example/showcase/pages/range_area_charts_page.dart';
 import 'package:braven_charts_example/showcase/pages/selection_showcase_page.dart';
@@ -106,6 +107,7 @@ _Family _familyOf(BravenChartPlus chart) {
     'PieChartSeries',
     'DonutChartSeries',
     'PolarColumnChartSeries',
+    'RadarChartSeries',
     'RadialBarChartSeries',
     'GaugeChartSeries',
   };
@@ -275,6 +277,13 @@ const List<_CensusPage> _censusPages = <_CensusPage>[
     statePrefixes: <String>['polar-presentation-', 'polar-playground'],
   ),
   _CensusPage(
+    name: 'Radar',
+    build: RadarChartsPage.new,
+    sourceFile: 'radar_charts_page.dart',
+    mountSites: 1,
+    statePrefixes: <String>['radar-presentation-'],
+  ),
+  _CensusPage(
     name: 'RadialBar',
     build: RadialBarPage.new,
     sourceFile: 'radial_bar_page.dart',
@@ -416,6 +425,11 @@ void main() {
 /// moved; the 3 that did not are the Line states named above, each with its
 /// second blocker identified. Nothing outside those 19 moved, and no page went
 /// down.
+///
+/// Re-measured 2026-08-12 for BC-0061 after reconciling the complete Radar
+/// showcase onto current master. Seven of the eleven mounted presentations
+/// emit faithful repeated `geomRadar` chains; the deliberately stress-oriented
+/// states retain explicit refusal verdicts.
 const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Line': <int>[16, 13, 6],
   'Area': <int>[9, 9, 8],
@@ -432,6 +446,10 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
   'Donut': <int>[5, 5, 5],
   'ConcentricDonut': <int>[6, 6, 6],
   'PolarColumn': <int>[9, 9, 9],
+  // 2026-08-12: Compact KPI adds one intentionally grammar-compatible Radar
+  // presentation while the risk and long-label stress recipes retain the
+  // existing explicit refusal/coverage balance.
+  'Radar': <int>[11, 11, 8],
   'RadialBar': <int>[12, 12, 0],
   'Gauge': <int>[12, 12, 0],
 };
@@ -439,11 +457,15 @@ const Map<String, List<int>> _expectedPerPage = <String, List<int>>{
 /// `[emitting, with a verdict]`, classified off each chart's LIVE series.
 const Map<_Family, List<int>> _expectedPerFamily = <_Family, List<int>>{
   _Family.cartesian: <int>[44, 133],
-  _Family.radial: <int>[31, 55],
+  // 2026-08-12: Eight new Radar states; five emit across primary/shadow paths.
+  _Family.radial: <int>[39, 66],
 };
 
-const int _expectedWithVerdict = 188;
-const int _expectedEmitting = 75;
+// 2026-08-12: Radar grew from three audited showcase states to eleven. All
+// eight additions have an explicit verdict. Primary and shadow/source verdicts
+// together add five emitting results to the aggregate census.
+const int _expectedWithVerdict = 199;
+const int _expectedEmitting = 83;
 
 /// The three `ChartWorkbenchPage` hydration tiles — restored copies of the
 /// primary chart's captured document, mounted beside the workbench rather than
@@ -514,8 +536,8 @@ void _mountSiteGuard() {
   expect(found, declared, reason: 'mount-site counts moved');
   expect(
     found.values.fold<int>(0, (a, b) => a + b),
-    17,
-    reason: 'the census is sized against 17 mount sites; found $found',
+    18,
+    reason: 'the census is sized against 18 mount sites; found $found',
   );
 }
 

@@ -129,6 +129,25 @@ class PublicSurfaceVisualCheckTest(unittest.TestCase):
                 html,
             )
 
+    def test_api_media_is_localized_to_checked_out_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            api_index = Path(directory) / "index.html"
+            api_index.write_text(
+                '<img src="'
+                + visual.RAW_REPOSITORY_URL
+                + 'doc/screenshots/chart_family_grid.png">',
+                encoding="utf-8",
+            )
+
+            visual._localize_api_repository_media(api_index)
+
+            html = api_index.read_text(encoding="utf-8")
+            self.assertNotIn(visual.RAW_REPOSITORY_URL, html)
+            self.assertIn(
+                '/repo/doc/screenshots/chart_family_grid.png',
+                html,
+            )
+
     def test_readme_wait_requires_decoded_settled_media(self) -> None:
         class Driver:
             def __init__(self) -> None:

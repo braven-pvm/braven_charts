@@ -144,6 +144,16 @@ const showcaseChartTypes = <ShowcaseChartType>[
     highlights: ['Independent totals', 'Ring weights', 'Shared selection'],
   ),
   ShowcaseChartType(
+    type: ChartType.radar,
+    label: 'Radar',
+    slug: 'radar-charts',
+    summary: 'Profiles across shared dimensions',
+    bestFor: 'Comparing several quantitative dimensions on one common scale',
+    icon: Icons.radar_outlined,
+    accent: Color(0xFF4F46E5),
+    highlights: ['Polygon + circle web', 'Multiple profiles', 'Shared scale'],
+  ),
+  ShowcaseChartType(
     type: ChartType.polarColumn,
     label: 'Polar Column',
     slug: 'polar-column',
@@ -270,6 +280,7 @@ class _ChartTypePreviewState extends State<ChartTypePreview>
     final isRadial =
         chartType.type == ChartType.pie ||
         chartType.type == ChartType.donut ||
+        chartType.type == ChartType.radar ||
         chartType.type == ChartType.polarColumn ||
         chartType.type == ChartType.radialBar ||
         chartType.type == ChartType.gauge;
@@ -313,6 +324,21 @@ class _ChartTypePreviewState extends State<ChartTypePreview>
               ),
             )
           : const PolarChartConfig(),
+      radarChartConfig: chartType.type == ChartType.radar
+          ? const RadarChartConfig(
+              pane: PolarPaneConfig(outerRadiusFactor: 0.72),
+              categoryAxis: RadarCategoryAxisConfig(
+                showLabels: false,
+                showSpokes: true,
+              ),
+              radialAxis: RadarNumericAxisConfig(
+                maximum: 100,
+                tickCount: 4,
+                showLabels: false,
+                gridShape: RadarGridShape.polygon,
+              ),
+            )
+          : const RadarChartConfig(),
       radialBarChartConfig: chartType.type == ChartType.radialBar
           ? const RadialBarChartConfig(
               pane: PolarPaneConfig(
@@ -1181,6 +1207,48 @@ List<ChartSeries> _previewSeries(
           position: PieDataLabelPosition.inside,
           content: PieDataLabelContent.percentage,
           minimumShare: 0.14,
+        ),
+      ),
+    ],
+    ChartType.radar => [
+      RadarChartSeries.fromMap(
+        id: 'catalog-radar-budget',
+        name: 'Budget',
+        values: const {
+          'Sales': 72,
+          'Marketing': 46,
+          'Delivery': 84,
+          'Support': 58,
+          'Technology': 67,
+          'Administration': 38,
+        },
+        color: const Color(0xFF0EA5E9),
+        unit: '%',
+        radarStyle: const RadarSeriesStyle(
+          strokeWidth: 2,
+          fillOpacity: 0.14,
+          showMarkers: true,
+          markerRadius: 2.5,
+        ),
+      ),
+      RadarChartSeries.fromMap(
+        id: 'catalog-radar-spend',
+        name: 'Actual',
+        values: const {
+          'Sales': 82,
+          'Marketing': 68,
+          'Delivery': 61,
+          'Support': 52,
+          'Technology': 76,
+          'Administration': 45,
+        },
+        color: const Color(0xFF4F46E5),
+        unit: '%',
+        radarStyle: const RadarSeriesStyle(
+          strokeWidth: 2,
+          fillOpacity: 0.10,
+          showMarkers: true,
+          markerRadius: 2.5,
         ),
       ),
     ],

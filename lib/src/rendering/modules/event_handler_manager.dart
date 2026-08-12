@@ -2887,7 +2887,7 @@ class EventHandlerManager {
 
   bool _usesCachedMarkerFeedback(HoveredMarkerInfo? marker) {
     if (marker == null) return false;
-    for (final element in _delegate.elements.whereType<SeriesElement>()) {
+    for (final element in _delegate.elements.whereType<DataHitElement>()) {
       if (element.id == marker.seriesId) {
         return element.series is! BarChartSeries &&
             element.series is! RangeAreaChartSeries &&

@@ -5,6 +5,7 @@ import '../../models/heatmap_chart_series.dart';
 import '../../models/interaction_config.dart';
 import '../../models/polar_chart_config.dart';
 import '../../models/polar_column_chart_series.dart';
+import '../../models/radar_chart_series.dart';
 import '../../models/radial_bar_chart_series.dart';
 import '../../models/radial_category_series.dart';
 import '../core/data_hit.dart';
@@ -235,6 +236,7 @@ class ChartSelectionResolver {
   static bool _usesLabelCategoryIdentity(ChartSeries series) =>
       series is RadialCategorySeries ||
       series is PolarColumnChartSeries ||
+      series is RadarChartSeries ||
       series is RadialBarChartSeries;
 
   static bool _sharesBarCompositionSlot(

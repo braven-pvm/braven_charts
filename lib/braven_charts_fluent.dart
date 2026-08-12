@@ -62,6 +62,8 @@ export 'src/fluent/generated/models/pie_chart_config_fluent.dart';
 export 'src/fluent/generated/models/pie_chart_series_fluent.dart';
 export 'src/fluent/generated/models/polar_chart_config_fluent.dart';
 export 'src/fluent/generated/models/polar_column_chart_series_fluent.dart';
+export 'src/fluent/generated/models/radar_chart_config_fluent.dart';
+export 'src/fluent/generated/models/radar_chart_series_fluent.dart';
 export 'src/fluent/generated/models/radial_bar_chart_config_fluent.dart';
 export 'src/fluent/generated/models/radial_bar_chart_series_fluent.dart';
 export 'src/fluent/generated/models/radial_category_series_fluent.dart';

@@ -21,6 +21,7 @@ import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
 import '../models/polar_chart_config.dart';
 import '../models/radial_bar_chart_config.dart';
+import '../models/radar_chart_config.dart';
 import '../models/range_area_data_point.dart';
 import '../models/series_callout_config.dart';
 import '../models/x_axis_config.dart';
@@ -345,6 +346,7 @@ class ChartDocumentExtractionSource {
     this.height,
     this.concentricDonutConfig,
     this.polarChartConfig,
+    this.radarChartConfig,
     this.radialBarChartConfig,
     this.gaugeChartConfig,
     this.seriesCallouts = const SeriesCalloutConfig(),
@@ -374,6 +376,7 @@ class ChartDocumentExtractionSource {
   final double? height;
   final ConcentricDonutConfig? concentricDonutConfig;
   final PolarChartConfig? polarChartConfig;
+  final RadarChartConfig? radarChartConfig;
   final RadialBarChartConfig? radialBarChartConfig;
   final GaugeChartConfig? gaugeChartConfig;
   final SeriesCalloutConfig seriesCallouts;
@@ -526,6 +529,14 @@ abstract final class ChartDocumentExtractor {
           ).values,
         );
       }
+      if (source.radarChartConfig case final radarConfig?) {
+        configurationValues.addAll(
+          _requireValue(
+            ChartConfigurationDocumentCodec.encodeRadarChart(radarConfig),
+            warnings,
+          ).values,
+        );
+      }
       if (source.radialBarChartConfig case final radialBarConfig?) {
         configurationValues.addAll(
           _requireValue(
@@ -561,6 +572,7 @@ abstract final class ChartDocumentExtractor {
           ...annotation.requiredCapabilities,
         if (source.concentricDonutConfig != null) 'series.donut.concentric.v1',
         if (source.polarChartConfig != null) 'chart.polar.config.v1',
+        if (source.radarChartConfig != null) 'chart.radar.config.v1',
         if (source.radialBarChartConfig != null) 'chart.radial.bar.config.v1',
         if (source.gaugeChartConfig != null) 'chart.gauge.config.v1',
         if (source.polarChartConfig?.thresholds.isNotEmpty == true)

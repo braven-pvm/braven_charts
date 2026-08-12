@@ -2,13 +2,13 @@
 //
 // Executable smoke coverage for the generated fluent surface.
 //
-// 162 of 164 classes have a synthesizable subject: every verb they
+// 170 of 172 classes have a synthesizable subject: every verb they
 // own is INVOKED on a real instance and asserted not to throw. Compilation is
 // no longer the only assertion — it never caught a verb that type-checks and
 // throws. A class whose constructor REJECTS the synthesized arguments skips
 // itself at run time and the runner reports the thrown message.
 //
-// 2060 verbs total; 13 of them have an argument type with no
+// 2156 verbs total; 13 of them have an argument type with no
 // synthesizable value and are compiled but not run. Every skip says why.
 //
 // Regenerate: dart run build_runner build
@@ -62,7 +62,7 @@ T? _subject<T>(T Function() build) {
 }
 
 /// How many classes run their verbs.
-const int _executedClasses = 162;
+const int _executedClasses = 170;
 
 /// How many classes have no synthesizable subject.
 const int _skippedClasses = 2;
@@ -5900,6 +5900,371 @@ void _smokePolarColumnChartSeries(_Verb verb, PolarColumnChartSeries subject) {
   );
 }
 
+/// Smoke coverage for [RadarGradientStyle]'s 9 executable verb(s).
+void _smokeRadarGradientStyle(_Verb verb, RadarGradientStyle subject) {
+  verb('RadarGradientStyleFluent.withEnabled', () => subject.withEnabled(true));
+  verb(
+    'RadarGradientStyleFluent.withType',
+    () => subject.withType(RadarGradientType.radial),
+  );
+  verb(
+    'RadarGradientStyleFluent.withStartColor',
+    () => subject.withStartColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RadarGradientStyleFluent.clearStartColor',
+    () => subject.clearStartColor(),
+  );
+  verb(
+    'RadarGradientStyleFluent.withEndColor',
+    () => subject.withEndColor(const Color(0xFF2196F3)),
+  );
+  verb('RadarGradientStyleFluent.clearEndColor', () => subject.clearEndColor());
+  verb(
+    'RadarGradientStyleFluent.withStartLightnessShift',
+    () => subject.withStartLightnessShift(0.2),
+  );
+  verb(
+    'RadarGradientStyleFluent.withEndLightnessShift',
+    () => subject.withEndLightnessShift(-0.14),
+  );
+  verb(
+    'RadarGradientStyleFluent.withAngleDegrees',
+    () => subject.withAngleDegrees(0),
+  );
+}
+
+/// Smoke coverage for [RadarShadowStyle]'s 6 executable verb(s).
+void _smokeRadarShadowStyle(_Verb verb, RadarShadowStyle subject) {
+  verb(
+    'RadarShadowStyleFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('RadarShadowStyleFluent.clearColor', () => subject.clearColor());
+  verb(
+    'RadarShadowStyleFluent.withBlurRadius',
+    () => subject.withBlurRadius(0),
+  );
+  verb(
+    'RadarShadowStyleFluent.withSpreadRadius',
+    () => subject.withSpreadRadius(0),
+  );
+  verb(
+    'RadarShadowStyleFluent.withOffset',
+    () => subject.withOffset(Offset.zero),
+  );
+  verb('RadarShadowStyleFluent.withOpacity', () => subject.withOpacity(0.28));
+}
+
+/// Smoke coverage for [RadarWebStyle]'s 18 executable verb(s).
+void _smokeRadarWebStyle(_Verb verb, RadarWebStyle subject) {
+  verb(
+    'RadarWebStyleFluent.withRingColor',
+    () => subject.withRingColor(const Color(0xFF2196F3)),
+  );
+  verb('RadarWebStyleFluent.clearRingColor', () => subject.clearRingColor());
+  verb('RadarWebStyleFluent.withRingWidth', () => subject.withRingWidth(1.0));
+  verb('RadarWebStyleFluent.clearRingWidth', () => subject.clearRingWidth());
+  verb(
+    'RadarWebStyleFluent.withRingDashPattern',
+    () => subject.withRingDashPattern(const <double>[]),
+  );
+  verb(
+    'RadarWebStyleFluent.clearRingDashPattern',
+    () => subject.clearRingDashPattern(),
+  );
+  verb(
+    'RadarWebStyleFluent.withSpokeColor',
+    () => subject.withSpokeColor(const Color(0xFF2196F3)),
+  );
+  verb('RadarWebStyleFluent.clearSpokeColor', () => subject.clearSpokeColor());
+  verb('RadarWebStyleFluent.withSpokeWidth', () => subject.withSpokeWidth(1.0));
+  verb('RadarWebStyleFluent.clearSpokeWidth', () => subject.clearSpokeWidth());
+  verb(
+    'RadarWebStyleFluent.withSpokeDashPattern',
+    () => subject.withSpokeDashPattern(const <double>[]),
+  );
+  verb(
+    'RadarWebStyleFluent.clearSpokeDashPattern',
+    () => subject.clearSpokeDashPattern(),
+  );
+  verb(
+    'RadarWebStyleFluent.withBoundaryColor',
+    () => subject.withBoundaryColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RadarWebStyleFluent.clearBoundaryColor',
+    () => subject.clearBoundaryColor(),
+  );
+  verb(
+    'RadarWebStyleFluent.withBoundaryWidth',
+    () => subject.withBoundaryWidth(1.0),
+  );
+  verb(
+    'RadarWebStyleFluent.clearBoundaryWidth',
+    () => subject.clearBoundaryWidth(),
+  );
+  verb(
+    'RadarWebStyleFluent.withBoundaryDashPattern',
+    () => subject.withBoundaryDashPattern(const <double>[]),
+  );
+  verb(
+    'RadarWebStyleFluent.clearBoundaryDashPattern',
+    () => subject.clearBoundaryDashPattern(),
+  );
+}
+
+/// Smoke coverage for [RadarSeriesStyle]'s 24 executable verb(s).
+void _smokeRadarSeriesStyle(_Verb verb, RadarSeriesStyle subject) {
+  verb(
+    'RadarSeriesStyleFluent.withStrokeWidth',
+    () => subject.withStrokeWidth(2),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withStrokeOpacity',
+    () => subject.withStrokeOpacity(1),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withStrokeDashPattern',
+    () => subject.withStrokeDashPattern(const <double>[]),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withFillColor',
+    () => subject.withFillColor(const Color(0xFF2196F3)),
+  );
+  verb('RadarSeriesStyleFluent.clearFillColor', () => subject.clearFillColor());
+  verb(
+    'RadarSeriesStyleFluent.withFillOpacity',
+    () => subject.withFillOpacity(0.12),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withGradient',
+    () => subject.withGradient(RadarGradientStyle()),
+  );
+  verb('RadarSeriesStyleFluent.clearGradient', () => subject.clearGradient());
+  verb(
+    'RadarSeriesStyleFluent.withShadow',
+    () => subject.withShadow(const RadarShadowStyle()),
+  );
+  verb(
+    'RadarSeriesStyleFluent.updateShadow',
+    () => subject.updateShadow((current) => current),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withShowMarkers',
+    () => subject.withShowMarkers(true),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withMarkerShape',
+    () => subject.withMarkerShape(SeriesMarkerShape.circle),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withMarkerRadius',
+    () => subject.withMarkerRadius(3),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withMarkerFillColor',
+    () => subject.withMarkerFillColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RadarSeriesStyleFluent.clearMarkerFillColor',
+    () => subject.clearMarkerFillColor(),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withMarkerBorderColor',
+    () => subject.withMarkerBorderColor(const Color(0xFF2196F3)),
+  );
+  verb(
+    'RadarSeriesStyleFluent.clearMarkerBorderColor',
+    () => subject.clearMarkerBorderColor(),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withMarkerBorderWidth',
+    () => subject.withMarkerBorderWidth(0),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withShowDataLabels',
+    () => subject.withShowDataLabels(false),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withMaximumVisibleDataLabels',
+    () => subject.withMaximumVisibleDataLabels(24),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withDataLabelOffset',
+    () => subject.withDataLabelOffset(8),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withDataLabelStyle',
+    () => subject.withDataLabelStyle(const PolarLabelStyle()),
+  );
+  verb(
+    'RadarSeriesStyleFluent.updateDataLabelStyle',
+    () => subject.updateDataLabelStyle((current) => current),
+  );
+  verb(
+    'RadarSeriesStyleFluent.withAnimationMode',
+    () => subject.withAnimationMode(RadarAnimationMode.none),
+  );
+}
+
+/// Smoke coverage for [RadarCategoryAxisConfig]'s 6 executable verb(s).
+void _smokeRadarCategoryAxisConfig(
+  _Verb verb,
+  RadarCategoryAxisConfig subject,
+) {
+  verb(
+    'RadarCategoryAxisConfigFluent.withShowLabels',
+    () => subject.withShowLabels(true),
+  );
+  verb(
+    'RadarCategoryAxisConfigFluent.withShowSpokes',
+    () => subject.withShowSpokes(true),
+  );
+  verb(
+    'RadarCategoryAxisConfigFluent.withMaximumVisibleLabels',
+    () => subject.withMaximumVisibleLabels(24),
+  );
+  verb(
+    'RadarCategoryAxisConfigFluent.withLabelOffset',
+    () => subject.withLabelOffset(8),
+  );
+  verb(
+    'RadarCategoryAxisConfigFluent.withLabelStyle',
+    () => subject.withLabelStyle(const PolarLabelStyle()),
+  );
+  verb(
+    'RadarCategoryAxisConfigFluent.updateLabelStyle',
+    () => subject.updateLabelStyle((current) => current),
+  );
+}
+
+/// Smoke coverage for [RadarNumericAxisConfig]'s 12 executable verb(s).
+void _smokeRadarNumericAxisConfig(_Verb verb, RadarNumericAxisConfig subject) {
+  verb(
+    'RadarNumericAxisConfigFluent.withMinimum',
+    () => subject.withMinimum(0),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withMaximum',
+    () => subject.withMaximum(1.0),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.clearMaximum',
+    () => subject.clearMaximum(),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withTickCount',
+    () => subject.withTickCount(5),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withShowLabels',
+    () => subject.withShowLabels(true),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withShowGridLines',
+    () => subject.withShowGridLines(true),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withGridShape',
+    () => subject.withGridShape(RadarGridShape.polygon),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withLabelPosition',
+    () => subject.withLabelPosition(PolarRadialLabelPosition.start),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withLabelAngleOffsetDegrees',
+    () => subject.withLabelAngleOffsetDegrees(0),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withLabelOffset',
+    () => subject.withLabelOffset(4),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.withLabelStyle',
+    () => subject.withLabelStyle(PolarLabelStyle()),
+  );
+  verb(
+    'RadarNumericAxisConfigFluent.updateLabelStyle',
+    () => subject.updateLabelStyle((current) => current),
+  );
+}
+
+/// Smoke coverage for [RadarChartConfig]'s 8 executable verb(s).
+void _smokeRadarChartConfig(_Verb verb, RadarChartConfig subject) {
+  verb(
+    'RadarChartConfigFluent.withPane',
+    () => subject.withPane(const PolarPaneConfig()),
+  );
+  verb(
+    'RadarChartConfigFluent.updatePane',
+    () => subject.updatePane((current) => current),
+  );
+  verb(
+    'RadarChartConfigFluent.withCategoryAxis',
+    () => subject.withCategoryAxis(const RadarCategoryAxisConfig()),
+  );
+  verb(
+    'RadarChartConfigFluent.updateCategoryAxis',
+    () => subject.updateCategoryAxis((current) => current),
+  );
+  verb(
+    'RadarChartConfigFluent.withRadialAxis',
+    () => subject.withRadialAxis(const RadarNumericAxisConfig()),
+  );
+  verb(
+    'RadarChartConfigFluent.updateRadialAxis',
+    () => subject.updateRadialAxis((current) => current),
+  );
+  verb(
+    'RadarChartConfigFluent.withWebStyle',
+    () => subject.withWebStyle(const RadarWebStyle()),
+  );
+  verb(
+    'RadarChartConfigFluent.updateWebStyle',
+    () => subject.updateWebStyle((current) => current),
+  );
+}
+
+/// Smoke coverage for [RadarChartSeries]'s 13 executable verb(s).
+void _smokeRadarChartSeries(_Verb verb, RadarChartSeries subject) {
+  verb('RadarChartSeriesFluent.withName', () => subject.withName('y'));
+  verb('RadarChartSeriesFluent.clearName', () => subject.clearName());
+  verb(
+    'RadarChartSeriesFluent.withColor',
+    () => subject.withColor(const Color(0xFF2196F3)),
+  );
+  verb('RadarChartSeriesFluent.clearColor', () => subject.clearColor());
+  verb(
+    'RadarChartSeriesFluent.withMetadata',
+    () => subject.withMetadata(const <String, dynamic>{}),
+  );
+  verb('RadarChartSeriesFluent.clearMetadata', () => subject.clearMetadata());
+  verb('RadarChartSeriesFluent.withUnit', () => subject.withUnit('y'));
+  verb('RadarChartSeriesFluent.clearUnit', () => subject.clearUnit());
+  verb(
+    'RadarChartSeriesFluent.withShowInLegend',
+    () => subject.withShowInLegend(true),
+  );
+  verb(
+    'RadarChartSeriesFluent.withShowTrackingAxisLabel',
+    () => subject.withShowTrackingAxisLabel(true),
+  );
+  verb(
+    'RadarChartSeriesFluent.withShowInTrackingTooltip',
+    () => subject.withShowInTrackingTooltip(true),
+  );
+  verb(
+    'RadarChartSeriesFluent.withRadarStyle',
+    () => subject.withRadarStyle(const RadarSeriesStyle()),
+  );
+  verb(
+    'RadarChartSeriesFluent.updateRadarStyle',
+    () => subject.updateRadarStyle((current) => current),
+  );
+}
+
 /// Smoke coverage for [RadialBarCategoryLabelConfig]'s 12 executable verb(s).
 void _smokeRadialBarCategoryLabelConfig(
   _Verb verb,
@@ -9626,6 +9991,80 @@ void main() {
         reason: 'generated PolarColumnChartSeriesFluent verb(s) threw',
       );
     });
+    test('RadarGradientStyle', () {
+      final subject = _subject(() => RadarGradientStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadarGradientStyle, subject),
+        isEmpty,
+        reason: 'generated RadarGradientStyleFluent verb(s) threw',
+      );
+    });
+    test('RadarShadowStyle', () {
+      final subject = _subject(() => RadarShadowStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadarShadowStyle, subject),
+        isEmpty,
+        reason: 'generated RadarShadowStyleFluent verb(s) threw',
+      );
+    });
+    test('RadarWebStyle', () {
+      final subject = _subject(() => RadarWebStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadarWebStyle, subject),
+        isEmpty,
+        reason: 'generated RadarWebStyleFluent verb(s) threw',
+      );
+    });
+    test('RadarSeriesStyle', () {
+      final subject = _subject(() => RadarSeriesStyle());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadarSeriesStyle, subject),
+        isEmpty,
+        reason: 'generated RadarSeriesStyleFluent verb(s) threw',
+      );
+    });
+    test('RadarCategoryAxisConfig', () {
+      final subject = _subject(() => RadarCategoryAxisConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadarCategoryAxisConfig, subject),
+        isEmpty,
+        reason: 'generated RadarCategoryAxisConfigFluent verb(s) threw',
+      );
+    });
+    test('RadarNumericAxisConfig', () {
+      final subject = _subject(() => RadarNumericAxisConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadarNumericAxisConfig, subject),
+        isEmpty,
+        reason: 'generated RadarNumericAxisConfigFluent verb(s) threw',
+      );
+    });
+    test('RadarChartConfig', () {
+      final subject = _subject(() => RadarChartConfig());
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadarChartConfig, subject),
+        isEmpty,
+        reason: 'generated RadarChartConfigFluent verb(s) threw',
+      );
+    });
+    test('RadarChartSeries', () {
+      final subject = _subject(
+        () => RadarChartSeries(id: 'x', points: const <ChartDataPoint>[]),
+      );
+      if (subject == null) return;
+      expect(
+        _record(_smokeRadarChartSeries, subject),
+        isEmpty,
+        reason: 'generated RadarChartSeriesFluent verb(s) threw',
+      );
+    });
     test('RadialBarCategoryLabelConfig', () {
       final subject = _subject(() => RadialBarCategoryLabelConfig());
       if (subject == null) return;
@@ -10313,7 +10752,7 @@ void main() {
   });
 
   test('the executed/skipped split is what the generator reported', () {
-    expect(_executedClasses, 162);
+    expect(_executedClasses, 170);
     expect(_skippedClasses, 2);
     expect(_compileOnlyCases, hasLength(8));
     expect(_compileOnlyVerbs, hasLength(13));

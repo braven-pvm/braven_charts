@@ -34,6 +34,7 @@ import 'elements/heatmap_raster_element.dart';
 import 'elements/gauge_series_element.dart';
 import 'elements/pie_series_element.dart';
 import 'elements/polar_column_series_element.dart';
+import 'elements/radar_series_element.dart';
 import 'elements/radial_bar_series_element.dart';
 import 'elements/resize_handle_element.dart';
 import 'elements/series_element.dart';
@@ -49,6 +50,7 @@ import 'interaction/selection/chart_selection_resolver.dart';
 import 'layout/chart_layout_kind.dart';
 import 'layout/polar_column_composition.dart';
 import 'layout/polar_column_stack_layout.dart';
+import 'layout/radar_composition.dart';
 import 'layout/concentric_donut_layout.dart';
 import 'models/auto_scroll_config.dart';
 import 'models/axis_scale_type.dart';
@@ -87,9 +89,12 @@ import 'models/pie_chart_series.dart';
 import 'models/pie_chart_config.dart';
 import 'models/polar_chart_config.dart';
 import 'models/polar_column_chart_series.dart';
+import 'models/radar_chart_config.dart';
+import 'models/radar_chart_series.dart';
 import 'models/radial_bar_chart_config.dart';
 import 'models/radial_bar_chart_series.dart';
 import 'models/path_animation_style.dart';
+import 'utils/radar_series_transition.dart';
 import 'models/radial_category_series.dart';
 import 'models/radial_legend_item.dart';
 import 'models/range_area_chart_series.dart';
@@ -125,6 +130,7 @@ import 'widgets/dialogs/threshold_annotation_dialog.dart';
 import 'widgets/dialogs/trend_annotation_dialog.dart';
 import 'widgets/chart_state_view.dart';
 import 'widgets/pie_chart_legend.dart';
+import 'widgets/chart_legend.dart';
 import 'widgets/web_context_menu.dart';
 
 Curve _monotonicRadialRevealCurve(Curve requested) {
@@ -246,6 +252,7 @@ class BravenChartPlus extends StatefulWidget {
     this.radialLegendItemBuilder,
     this.concentricDonutConfig = const ConcentricDonutConfig(),
     this.polarChartConfig = const PolarChartConfig(),
+    this.radarChartConfig = const RadarChartConfig(),
     this.radialBarChartConfig = const RadialBarChartConfig(),
     this.gaugeChartConfig = const GaugeChartConfig(),
     this.gaugeCenterBuilder,
@@ -835,6 +842,10 @@ class BravenChartPlus extends StatefulWidget {
         'Polar Column requires category labels. Use '
         'PolarColumnChartSeries.fromMap instead.',
       ),
+      ChartType.radar => throw ArgumentError(
+        'Radar requires ordered category labels. Use '
+        'RadarChartSeries.fromMap instead.',
+      ),
       ChartType.radialBar => throw ArgumentError(
         'Radial Bar requires category labels. Use '
         'RadialBarChartSeries.fromMap instead.',
@@ -1100,6 +1111,12 @@ class BravenChartPlus extends StatefulWidget {
   /// Cartesian axis arguments are ignored by Polar Column. Pie and Donut do
   /// not consume this configuration.
   final PolarChartConfig polarChartConfig;
+
+  /// Plot-level web, spokes, labels, and numeric domain used by Radar.
+  ///
+  /// Every [RadarChartSeries] in the pane shares this configuration and one
+  /// ordered category domain. Cartesian axis arguments are ignored.
+  final RadarChartConfig radarChartConfig;
 
   /// Plot-level pane, track layout, and guides used by [RadialBarChartSeries].
   ///
@@ -1492,6 +1509,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   _candlestickSeriesTransitions =
       <String, _ActiveCandlestickSeriesTransition>{};
   _ActiveRadialSeriesTransition? _radialSeriesTransition;
+  final Map<String, _ActiveRadarSeriesTransition> _radarSeriesTransitions =
+      <String, _ActiveRadarSeriesTransition>{};
   _ActiveGaugeSeriesTransition? _gaugeSeriesTransition;
   final Map<String, _ActivePathSeriesTransition> _pathSeriesTransitions =
       <String, _ActivePathSeriesTransition>{};
@@ -1826,6 +1845,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ..stop()
           ..value = 1;
         _radialSeriesTransition = null;
+        _radarSeriesTransitions.clear();
         _gaugeSeriesTransition = null;
         _radialSelectionAnimationController
           ..stop()
@@ -2047,6 +2067,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.annotations != oldWidget.annotations ||
         widget.concentricDonutConfig != oldWidget.concentricDonutConfig ||
         widget.polarChartConfig != oldWidget.polarChartConfig ||
+        widget.radarChartConfig != oldWidget.radarChartConfig ||
         widget.radialBarChartConfig != oldWidget.radialBarChartConfig ||
         widget.gaugeChartConfig != oldWidget.gaugeChartConfig ||
         widget.heatmapRasterOpacity != oldWidget.heatmapRasterOpacity ||
@@ -2094,6 +2115,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       widget.xAxisConfig != oldWidget.xAxisConfig ||
       widget.yAxis != oldWidget.yAxis ||
       widget.grid != oldWidget.grid ||
+      widget.radarChartConfig != oldWidget.radarChartConfig ||
       widget.interactionConfig != oldWidget.interactionConfig ||
       widget.title != oldWidget.title ||
       widget.subtitle != oldWidget.subtitle ||
@@ -3047,6 +3069,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           resolved.allSeries.whereType<PolarColumnChartSeries>().isNotEmpty
           ? widget.polarChartConfig
           : null,
+      radarChartConfig:
+          resolved.allSeries.whereType<RadarChartSeries>().isNotEmpty
+          ? widget.radarChartConfig
+          : null,
       radialBarChartConfig:
           resolved.allSeries.whereType<RadialBarChartSeries>().isNotEmpty
           ? widget.radialBarChartConfig
@@ -3125,6 +3151,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           polarColumns,
           config: widget.polarChartConfig,
         );
+      } else if (_resolvedChartData.allSeries
+          .whereType<RadarChartSeries>()
+          .isNotEmpty) {
+        final radarSeries = _resolvedChartData.allSeries
+            .whereType<RadarChartSeries>()
+            .toList(growable: false);
+        widget.radarChartConfig.validate();
+        RadarComposition.validate(radarSeries);
       } else {
         widget.radialBarChartConfig.validate();
         final radialBar = _resolvedChartData.allSeries
@@ -4004,6 +4038,50 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   List<ChartElement> _buildPolarElements(ChartTransform transform) {
+    final radarSeries = _effectiveRenderSeries
+        .whereType<RadarChartSeries>()
+        .toList(growable: false);
+    if (radarSeries.isNotEmpty) {
+      final targetRadarSeries = _effectiveDataSeries
+          .whereType<RadarChartSeries>()
+          .toList(growable: false);
+      final scaleValues = <double>[
+        // Keep the web and radial labels stable while profile values morph.
+        for (final series in targetRadarSeries)
+          for (final point in series.points) point.y,
+      ];
+      return <ChartElement>[
+        for (final (index, series) in radarSeries.indexed)
+          RadarSeriesElement(
+            series: series,
+            config: widget.radarChartConfig,
+            size: Size(transform.plotWidth, transform.plotHeight),
+            theme: widget.theme ?? ChartTheme.light,
+            seriesIndex: index,
+            seriesCount: radarSeries.length,
+            numericScaleValues: scaleValues,
+            paintGrid: index == 0,
+            paintAxisLabels: index == radarSeries.length - 1,
+            revealProgress:
+                series.radarStyle.animationMode == RadarAnimationMode.radial
+                ? _radialRevealProgress
+                : 1,
+            fadeProgress:
+                series.radarStyle.animationMode == RadarAnimationMode.fade
+                ? _radialRevealProgress
+                : 1,
+            textScaleFactor: _textScaleFactor,
+            focusedPointIndices: {
+              for (final ref in _focusedPointRefs)
+                if (ref.seriesId == series.id) ref.pointIndex,
+            },
+            selectedPointIndices: {
+              for (final ref in _selectedPointRefs)
+                if (ref.seriesId == series.id) ref.pointIndex,
+            },
+          ),
+      ];
+    }
     final radialBars = _effectiveRenderSeries
         .whereType<RadialBarChartSeries>()
         .toList(growable: false);
@@ -4490,7 +4568,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _handleRadialDataAnimationTick() {
     if (!mounted ||
-        (_radialSeriesTransition == null && _gaugeSeriesTransition == null)) {
+        (_radialSeriesTransition == null &&
+            _radarSeriesTransitions.isEmpty &&
+            _gaugeSeriesTransition == null)) {
       return;
     }
     setState(() {
@@ -4511,6 +4591,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (status != AnimationStatus.completed || !mounted) return;
     setState(() {
       _radialSeriesTransition = null;
+      _radarSeriesTransitions.clear();
       _gaugeSeriesTransition = null;
       _refreshAnimatedRenderSeries();
       _elementGeneratorVersion++;
@@ -4974,8 +5055,66 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     required List<ChartSeries> nextSeries,
   }) {
     _radialSeriesTransition = null;
+    _radarSeriesTransitions.clear();
     _gaugeSeriesTransition = null;
     _radialDataAnimationController.stop();
+    final nextRadarSeries = nextSeries.whereType<RadarChartSeries>().toList(
+      growable: false,
+    );
+    if (_layoutKind == ChartLayoutKind.polarAxis &&
+        nextRadarSeries.isNotEmpty) {
+      final previousRadarIds = previousSeriesById.values
+          .whereType<RadarChartSeries>()
+          .map((series) => series.id)
+          .toSet();
+      final nextRadarIds = nextRadarSeries.map((series) => series.id).toSet();
+      var topologyChanged = !setEquals(previousRadarIds, nextRadarIds);
+      for (final next in nextRadarSeries) {
+        final previous = previousSeriesById[next.id];
+        if (previous is! RadarChartSeries ||
+            !RadarSeriesTransition.isCompatible(previous, next)) {
+          topologyChanged = true;
+          continue;
+        }
+        if (previous.points == next.points ||
+            listEquals(previous.points, next.points) ||
+            next.radarStyle.animationMode == RadarAnimationMode.none ||
+            _disableAnimations ||
+            _barDataAnimationDuration == Duration.zero) {
+          continue;
+        }
+        _radarSeriesTransitions[next.id] = _ActiveRadarSeriesTransition(
+          from: previous,
+          to: next,
+        );
+      }
+      if (topologyChanged) {
+        _radarSeriesTransitions.clear();
+        _radialDataAnimationController.value = 1;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted ||
+              !_effectiveRenderSeries.any(
+                (series) => series is RadarChartSeries,
+              )) {
+            return;
+          }
+          _startRadialRevealAnimation();
+        });
+        return;
+      }
+      if (_radarSeriesTransitions.isEmpty) {
+        _radialDataAnimationController.value = 1;
+        return;
+      }
+      _radialDataAnimationController
+        ..duration = _barDataAnimationDuration
+        ..value = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _radarSeriesTransitions.isEmpty) return;
+        _radialDataAnimationController.forward();
+      });
+      return;
+    }
     if (nextSeries.length != 1) {
       _radialDataAnimationController.value = 1;
       return;
@@ -5032,6 +5171,23 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   bool _radialDataChanged(List<ChartSeries> previous, List<ChartSeries> next) {
+    final previousRadar = previous.whereType<RadarChartSeries>().toList(
+      growable: false,
+    );
+    final nextRadar = next.whereType<RadarChartSeries>().toList(
+      growable: false,
+    );
+    if (previousRadar.isNotEmpty || nextRadar.isNotEmpty) {
+      if (previousRadar.length != nextRadar.length) return true;
+      for (var index = 0; index < nextRadar.length; index++) {
+        final before = previousRadar[index];
+        final after = nextRadar[index];
+        if (before.id != after.id || !listEquals(before.points, after.points)) {
+          return true;
+        }
+      }
+      return false;
+    }
     if (previous.length != 1 || next.length != 1) return false;
     final previousRadial = previous.single;
     final nextRadial = next.single;
@@ -5220,6 +5376,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     required ChartTheme previousTheme,
     required ChartTheme nextTheme,
   }) {
+    final previousRadar = previous.whereType<RadarChartSeries>().toList(
+      growable: false,
+    );
+    final nextRadar = next.whereType<RadarChartSeries>().toList(
+      growable: false,
+    );
+    if (previousRadar.isNotEmpty || nextRadar.isNotEmpty) {
+      if (previousRadar.length != nextRadar.length) return true;
+      return !listEquals(
+        [for (final series in previousRadar) series.radarStyle.animationMode],
+        [for (final series in nextRadar) series.radarStyle.animationMode],
+      );
+    }
     final previousPolar = previous.whereType<PolarColumnChartSeries>().toList(
       growable: false,
     );
@@ -5264,6 +5433,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _effectiveRenderSeries.any(
         (series) =>
             series is RadialBarChartSeries ||
+            (series is RadarChartSeries &&
+                series.radarStyle.animationMode != RadarAnimationMode.none) ||
             (series is PolarColumnChartSeries &&
                 series.polarStyle.animationMode !=
                     PolarColumnAnimationMode.none),
@@ -5278,7 +5449,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final series = _effectiveRadialSeries;
     final hasPolarSeries = _effectiveRenderSeries.any(
       (series) =>
-          series is PolarColumnChartSeries || series is RadialBarChartSeries,
+          series is PolarColumnChartSeries ||
+          series is RadialBarChartSeries ||
+          series is RadarChartSeries,
     );
     final hasGaugeSeries = _effectiveRenderSeries.any(
       (series) => series is GaugeChartSeries,
@@ -5316,6 +5489,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                 (series) =>
                     series is PolarColumnChartSeries ||
                     series is RadialBarChartSeries ||
+                    series is RadarChartSeries ||
                     series is GaugeChartSeries,
               ))) {
         return;
@@ -5457,6 +5631,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             final transition = _candlestickSeriesTransitions[series.id];
             if (transition == null) return series;
             return CandlestickSeriesTransition.interpolate(
+              from: transition.from,
+              to: transition.to,
+              progress: progress,
+            );
+          })
+          .toList(growable: false);
+    }
+    if (_radarSeriesTransitions.isNotEmpty) {
+      final progress = _radialDataAnimationProgress;
+      renderSeries = renderSeries
+          .map((series) {
+            final transition = _radarSeriesTransitions[series.id];
+            if (transition == null) return series;
+            return RadarSeriesTransition.interpolate(
               from: transition.from,
               to: transition.to,
               progress: progress,
@@ -7650,6 +7838,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               ? element.dataHitForPointIndex(marker!.markerIndex)
               : null);
       if (hit != null) {
+        _syncRadarCategoryFocus(hit);
         widget.onPointHover?.call(hit.point, element.series.id);
         widget.interactionConfig?.onDataPointHover?.call(
           hit.point,
@@ -7660,6 +7849,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.interactionConfig?.onDataPointHover?.call(null, Offset.zero);
       }
     } else {
+      if (_effectiveRenderSeries.any((series) => series is RadarChartSeries) &&
+          _focusedPointRefs.isNotEmpty) {
+        _focusedPointRefs.clear();
+        _refreshLinkedPointRendering();
+        _syncControllerPointState();
+      }
       widget.onPointHover?.call(null, null);
       widget.interactionConfig?.onDataPointHover?.call(null, Offset.zero);
     }
@@ -8092,7 +8287,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           (candidate) =>
               (candidate is PolarColumnChartSeries ||
                   candidate is RadialBarChartSeries ||
-                  candidate is GaugeChartSeries) &&
+                  candidate is GaugeChartSeries ||
+                  candidate is RadarChartSeries) &&
               candidate.id == seriesId,
         )
         .firstOrNull;
@@ -8103,9 +8299,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
 
     final ref = ChartPointRef(seriesId: seriesId, pointIndex: pointIndex);
-    _focusedPointRefs
-      ..clear()
-      ..add(ref);
+    _radialKeyboardFocusRef = ref;
+    if (series is RadarChartSeries) {
+      _syncRadarCategoryFocusFor(
+        category: series.points[pointIndex].label!,
+        primaryRef: ref,
+      );
+    } else {
+      _focusedPointRefs
+        ..clear()
+        ..add(ref);
+    }
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     final hit = renderBox?.dataHitForPointIndex(seriesId, pointIndex);
@@ -8130,10 +8334,54 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _syncControllerPointState();
   }
 
+  void _syncRadarCategoryFocus(ChartDataHit hit) {
+    final source = _effectiveRenderSeries
+        .whereType<RadarChartSeries>()
+        .where((series) => series.id == hit.seriesId)
+        .firstOrNull;
+    final category = hit.category ?? hit.point.label;
+    if (source == null || category == null) return;
+    _syncRadarCategoryFocusFor(
+      category: category,
+      primaryRef: ChartPointRef(
+        seriesId: hit.seriesId,
+        pointIndex: hit.pointIndex,
+      ),
+    );
+  }
+
+  void _syncRadarCategoryFocusFor({
+    required String category,
+    required ChartPointRef primaryRef,
+  }) {
+    final next = <ChartPointRef>{};
+    for (final series in _effectiveRenderSeries.whereType<RadarChartSeries>()) {
+      final pointIndex = series.points.indexWhere(
+        (point) => point.label?.trim() == category.trim(),
+      );
+      if (pointIndex >= 0) {
+        next.add(ChartPointRef(seriesId: series.id, pointIndex: pointIndex));
+      }
+    }
+    if (next.isEmpty) next.add(primaryRef);
+    if (setEquals(next, _focusedPointRefs)) return;
+    _focusedPointRefs
+      ..clear()
+      ..addAll(next);
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
+  }
+
   bool _handlePolarKeyEvent(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
     final interaction = _effectiveRadialInteractionConfig();
     if (!interaction.enabled || !interaction.keyboard.enabled) return false;
+    final radarSeries = _effectiveRenderSeries
+        .whereType<RadarChartSeries>()
+        .toList(growable: false);
+    if (radarSeries.isNotEmpty) {
+      return _handleRadarKeyEvent(event, interaction, radarSeries);
+    }
     final polarSeries = _effectiveRenderSeries
         .where(
           (candidate) =>
@@ -8216,6 +8464,95 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _refreshLinkedPointRendering();
       _syncControllerPointState();
       interaction.onKeyboardAction?.call('clear_column_selection', null);
+      return true;
+    }
+    return false;
+  }
+
+  bool _handleRadarKeyEvent(
+    KeyDownEvent event,
+    InteractionConfig interaction,
+    List<RadarChartSeries> radarSeries,
+  ) {
+    final categoryCount = radarSeries.first.points.length;
+    if (categoryCount == 0) return false;
+
+    var seriesIndex = 0;
+    var categoryIndex = -1;
+    final currentRef = _radialKeyboardFocusRef;
+    if (currentRef != null) {
+      final resolvedSeriesIndex = radarSeries.indexWhere(
+        (series) => series.id == currentRef.seriesId,
+      );
+      if (resolvedSeriesIndex >= 0) {
+        seriesIndex = resolvedSeriesIndex;
+        categoryIndex = currentRef.pointIndex.clamp(0, categoryCount - 1);
+      }
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+        event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+        event.logicalKey == LogicalKeyboardKey.arrowDown ||
+        event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        categoryIndex = categoryIndex < 0
+            ? 0
+            : (categoryIndex + 1) % categoryCount;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+        categoryIndex = categoryIndex < 0
+            ? categoryCount - 1
+            : (categoryIndex - 1) % categoryCount;
+      } else {
+        categoryIndex = categoryIndex < 0 ? 0 : categoryIndex;
+        final delta = event.logicalKey == LogicalKeyboardKey.arrowDown ? 1 : -1;
+        seriesIndex = (seriesIndex + delta) % radarSeries.length;
+      }
+      final series = radarSeries[seriesIndex];
+      _focusPolarPoint(categoryIndex, seriesId: series.id);
+      interaction.onKeyboardAction?.call(
+        event.logicalKey == LogicalKeyboardKey.arrowRight
+            ? 'focus_next_radar_category'
+            : event.logicalKey == LogicalKeyboardKey.arrowLeft
+            ? 'focus_previous_radar_category'
+            : event.logicalKey == LogicalKeyboardKey.arrowDown
+            ? 'focus_next_radar_profile'
+            : 'focus_previous_radar_profile',
+        series.points[categoryIndex],
+      );
+      return true;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      final ref =
+          _radialKeyboardFocusRef ??
+          ChartPointRef(seriesId: radarSeries.first.id, pointIndex: 0);
+      _focusPolarPoint(ref.pointIndex, seriesId: ref.seriesId);
+      final visible = <ChartPointRef>[
+        for (final series in radarSeries)
+          for (var index = 0; index < series.points.length; index++)
+            ChartPointRef(seriesId: series.id, pointIndex: index),
+      ];
+      final handled = _activateKeyboardNonCartesianPoint(ref, visible);
+      interaction.onKeyboardAction?.call(
+        'select_radar_vertex',
+        radarSeries
+            .firstWhere((series) => series.id == ref.seriesId)
+            .points[ref.pointIndex],
+      );
+      return handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _radialKeyboardFocusRef = null;
+      _focusedPointRefs.clear();
+      _coordinator.setHoveredMarker(null);
+      _clearRadialPointSelection();
+      _clearSemanticSeriesSelection();
+      _keyboardSelectionAnchorRef = null;
+      _refreshLinkedPointRendering();
+      _syncControllerPointState();
+      interaction.onKeyboardAction?.call('clear_radar_selection', null);
       return true;
     }
     return false;
@@ -12186,6 +12523,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               growable: false,
             )
           : const <RadialBarChartSeries>[];
+      final radarSeries = isPolarAxis
+          ? _resolvedChartData.allSeries.whereType<RadarChartSeries>().toList(
+              growable: false,
+            )
+          : const <RadarChartSeries>[];
       final gaugeSeries = isGauge
           ? _effectiveRenderSeries.whereType<GaugeChartSeries>().toList(
               growable: false,
@@ -12203,10 +12545,32 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       if (widget.showLegend &&
           (legendRadialSeries.isNotEmpty ||
               legendRadialBarSeries.isNotEmpty ||
-              legendGaugeSeries.isNotEmpty)) {
+              legendGaugeSeries.isNotEmpty ||
+              radarSeries.any((series) => series.showInLegend))) {
         final theme = chartTheme;
         final Widget legend;
-        if (legendGaugeSeries.isNotEmpty) {
+        if (radarSeries.isNotEmpty) {
+          final style = widget.legendStyle ?? theme.legendStyle;
+          legend = ChartLegend(
+            key: const ValueKey('radar-legend'),
+            series: radarSeries,
+            hiddenSeriesIds: _hiddenSeriesIds,
+            onSeriesToggle: (seriesId) => _setSeriesVisibility(
+              seriesId,
+              _hiddenSeriesIds.contains(seriesId),
+            ),
+            orientation: style.orientation == LegendOrientation.horizontal
+                ? Axis.horizontal
+                : Axis.vertical,
+            spacing: style.itemSpacing,
+            padding: style.effectivePadding,
+            backgroundColor: style.backgroundColor,
+            borderRadius: style.effectiveBorderRadius,
+            showBorder: style.borderWidth > 0,
+            borderColor: style.borderColor,
+            textStyle: style.textStyle,
+          );
+        } else if (legendGaugeSeries.isNotEmpty) {
           legend = GaugeLegend(
             key: const ValueKey('gauge-legend'),
             series: legendGaugeSeries.single,
@@ -12261,7 +12625,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             child: _buildPieLegendLayout(
               chartContent: chartContent,
               legend: legend,
-              style: theme.legendStyle,
+              style: widget.legendStyle ?? theme.legendStyle,
             ),
           ),
         );
@@ -13232,6 +13596,13 @@ class _ActiveRadialSeriesTransition {
 
   final RadialCategorySeries from;
   final RadialCategorySeries to;
+}
+
+class _ActiveRadarSeriesTransition {
+  const _ActiveRadarSeriesTransition({required this.from, required this.to});
+
+  final RadarChartSeries from;
+  final RadarChartSeries to;
 }
 
 class _ActiveGaugeSeriesTransition {

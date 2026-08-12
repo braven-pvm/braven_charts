@@ -466,6 +466,9 @@ class ChartTableModel {
               series.type == 'polarColumn' || series.type == 'radialBar',
         )
         .toList();
+    final radarSeries = selected
+        .where((series) => series.type == 'radar')
+        .toList();
     final candlestickSeries = selected
         .where((series) => series.type == 'candlestick')
         .toList();
@@ -517,7 +520,8 @@ class ChartTableModel {
       );
     }
     if ((radialSeries.isNotEmpty && radialSeries.length != selected.length) ||
-        (polarSeries.isNotEmpty && polarSeries.length != selected.length)) {
+        (polarSeries.isNotEmpty && polarSeries.length != selected.length) ||
+        (radarSeries.isNotEmpty && radarSeries.length != selected.length)) {
       throw UnsupportedError(
         'Radial table projection cannot mix chart families.',
       );
@@ -669,7 +673,10 @@ class ChartTableModel {
             reference: reference,
             seriesName: series.name ?? series.id,
             xRaw: x,
-            xDisplay: series.type == 'polarColumn' || series.type == 'radialBar'
+            xDisplay:
+                series.type == 'polarColumn' ||
+                    series.type == 'radialBar' ||
+                    series.type == 'radar'
                 ? (point.label?.trim().isNotEmpty == true
                       ? point.label!.trim()
                       : 'No category')
@@ -770,7 +777,8 @@ class ChartTableModel {
       documentRevision: document.revision,
       xColumnLabel:
           projectionKind == ChartTableProjectionKind.pie ||
-              projectionKind == ChartTableProjectionKind.polar
+              projectionKind == ChartTableProjectionKind.polar ||
+              radarSeries.isNotEmpty
           ? 'Category'
           : projectionKind == ChartTableProjectionKind.gauge
           ? 'Metric'

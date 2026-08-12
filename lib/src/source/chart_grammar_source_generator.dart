@@ -131,6 +131,8 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
+import '../models/radar_chart_config.dart';
+import '../models/radar_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
 import '../models/scatter_marker_style.dart';
@@ -508,6 +510,29 @@ class _PolarChartPlan {
   final PolarChartConfig config;
 }
 
+/// One Radar profile and the value field its geometry reads.
+class _RadarSeriesPlan {
+  _RadarSeriesPlan({required this.value, required this.mark});
+
+  final _Field value;
+  final RadarMark<_SourceRow> mark;
+}
+
+/// N aligned Radar profiles over one ordered category domain.
+class _RadarChartPlan {
+  _RadarChartPlan({
+    required this.rows,
+    required this.category,
+    required this.series,
+    required this.config,
+  });
+
+  final List<_SourceRow> rows;
+  final _Field category;
+  final List<_RadarSeriesPlan> series;
+  final RadarChartConfig config;
+}
+
 // ===========================================================================
 // Emitter
 // ===========================================================================
@@ -849,8 +874,8 @@ class _GrammarChainEmitter {
   // Radial reversal
   // =========================================================================
 
-  /// Reverses a RADIAL chart (pie / donut / concentric-donut / polar-column)
-  /// into a `geomPie` / `geomDonut(ring:)` / `geomPolar` chain, proving fidelity
+  /// Reverses a RADIAL chart (pie / donut / concentric-donut / polar-column /
+  /// Radar) into its dedicated geometry chain, proving fidelity
   /// against the real radial lowering before emitting anything — exactly as the
   /// Cartesian path does, but over the radial branch of `spec.lower()`.
   String? _tryEmitRadialChain(
@@ -864,6 +889,9 @@ class _GrammarChainEmitter {
     if (series.isNotEmpty &&
         series.every((item) => item is PolarColumnChartSeries)) {
       return _tryEmitPolarChain(series.cast<PolarColumnChartSeries>(), block);
+    }
+    if (series.isNotEmpty && series.every((item) => item is RadarChartSeries)) {
+      return _tryEmitRadarChain(series.cast<RadarChartSeries>(), block);
     }
     final plan = _planRadial(series, block);
     if (plan == null) return null;
@@ -966,6 +994,53 @@ class _GrammarChainEmitter {
 
     _captureKnownLimitations();
     return _emitPolarChartBody(plan);
+  }
+
+  /// Reverses one or more aligned Radar profiles into repeated `geomRadar`
+  /// verbs followed by the shared `.radarConfig(...)` plot contract.
+  String? _tryEmitRadarChain(
+    List<RadarChartSeries> series,
+    void Function(String message, {String? path}) block,
+  ) {
+    final plan = _planRadarChart(series, block);
+    if (plan == null) return null;
+    final spec = PlotSpec<_SourceRow>(
+      data: plan.rows,
+      marks: <Mark<_SourceRow>>[for (final item in plan.series) item.mark],
+      transposed: false,
+      theme: configuration.theme,
+      interaction: configuration.interaction,
+      xAxis: null,
+      yAxes: const <YAxisConfig>[],
+      grid: null,
+      title: configuration.title,
+      subtitle: configuration.subtitle,
+      showLegend: configuration.showLegend,
+      radar: plan.config,
+    );
+    final LoweredPlot lowered;
+    try {
+      lowered = spec.lower();
+    } on GrammarSpecException catch (error) {
+      block(
+        'Grammar chain not emitted: the reconstructed Radar specification was '
+        'rejected by the grammar layer — ${error.message}',
+        path: r'$.series',
+      );
+      return null;
+    }
+    final mismatch = _firstRadialMismatch(lowered);
+    if (mismatch != null) {
+      block(
+        'Grammar chain not emitted: the reconstructed chain does not reproduce '
+        '${mismatch.subject} exactly, so writing it would hand back a '
+        'different chart. ${mismatch.detail}',
+        path: r'$.series',
+      );
+      return null;
+    }
+    _captureKnownLimitations();
+    return _emitRadarChartBody(plan);
   }
 
   /// Classifies [series] into one radial kind and builds its plan, or blocks
@@ -1456,6 +1531,73 @@ class _GrammarChainEmitter {
     );
   }
 
+  _RadarChartPlan? _planRadarChart(
+    List<RadarChartSeries> series,
+    void Function(String message, {String? path}) block,
+  ) {
+    final categories = series.first.categories;
+    final misaligned = <String>[
+      for (final item in series.skip(1))
+        if (!_sameRadarCategoryDomain(categories, item)) item.id,
+    ];
+    if (misaligned.isNotEmpty) {
+      block(
+        'Grammar chain not emitted: repeated geomRadar marks read one ordered '
+        'row domain, so every Radar profile must carry the same categories in '
+        'the same order. "${series.first.id}" sets the domain; these profiles '
+        'do not match it: ${misaligned.join(', ')}.',
+        path: r'$.series[*].data',
+      );
+      return null;
+    }
+
+    final category = _addField('category', _FieldKind.string);
+    final values = <_Field>[
+      for (final item in series)
+        _addField('${item.id}Value', _FieldKind.number),
+    ];
+    final rows = _synthesiseRadialRows(categories.length);
+    for (var pointIndex = 0; pointIndex < categories.length; pointIndex++) {
+      rows[pointIndex].strings[category.slot] = categories[pointIndex];
+      for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
+        rows[pointIndex].numbers[values[seriesIndex].slot] =
+            series[seriesIndex].points[pointIndex].y;
+      }
+    }
+
+    return _RadarChartPlan(
+      rows: rows,
+      category: category,
+      series: <_RadarSeriesPlan>[
+        for (var index = 0; index < series.length; index++)
+          _RadarSeriesPlan(
+            value: values[index],
+            mark: RadarMark<_SourceRow>(
+              id: series[index].id,
+              name: series[index].name,
+              color: series[index].color,
+              unit: series[index].unit,
+              category: _string(category),
+              value: _number(values[index]),
+              style: series[index].radarStyle,
+            ),
+          ),
+      ],
+      config: configuration.radarChartConfig ?? const RadarChartConfig(),
+    );
+  }
+
+  bool _sameRadarCategoryDomain(
+    List<String> categories,
+    RadarChartSeries series,
+  ) {
+    if (series.points.length != categories.length) return false;
+    for (var index = 0; index < categories.length; index++) {
+      if (series.points[index].label?.trim() != categories[index]) return false;
+    }
+    return true;
+  }
+
   /// Whether [series] carries exactly [categories], in the same order.
   bool _sameCategoryDomain(
     List<String> categories,
@@ -1674,6 +1816,15 @@ class _GrammarChainEmitter {
             'This one does not.',
       );
     }
+    if (lowered.radarChartConfig != configuration.radarChartConfig) {
+      return (
+        subject: 'the Radar chart configuration',
+        detail:
+            'A Radar chain sets the shared pane, category web, and numeric '
+            'radial axis with .radarConfig(...), so the re-lowered plot must '
+            'carry the captured RadarChartConfig exactly. This one does not.',
+      );
+    }
     return null;
   }
 
@@ -1766,7 +1917,7 @@ class _GrammarChainEmitter {
 
   /// Whether a grammar geometry exists that reverses [series]. Covers the five
   /// Cartesian families, range area, heatmap, and the radial families the
-  /// grammar lowers (pie, donut, polar-column). Radial-bar and gauge stay
+  /// grammar lowers (pie, donut, polar-column, Radar). Radial-bar and gauge stay
   /// refused — they have no `geom*` verb and no `Mark` subtype.
   bool _isEmittableFamily(ChartSeries series) => switch (series) {
     CandlestickChartSeries() => true,
@@ -1779,6 +1930,7 @@ class _GrammarChainEmitter {
     PieChartSeries() => true,
     DonutChartSeries() => true,
     PolarColumnChartSeries() => true,
+    RadarChartSeries() => true,
     _ => false,
   };
 
@@ -1788,7 +1940,8 @@ class _GrammarChainEmitter {
   bool _isRadialFamily(ChartSeries series) =>
       series is PieChartSeries ||
       series is DonutChartSeries ||
-      series is PolarColumnChartSeries;
+      series is PolarColumnChartSeries ||
+      series is RadarChartSeries;
 
   /// Chart-level options `BravenPlot` leaves at their `BravenChartPlus`
   /// defaults, and which a chain therefore cannot carry.
@@ -1831,8 +1984,9 @@ class _GrammarChainEmitter {
     if (configuration.seriesCallouts != const SeriesCalloutConfig()) {
       lost.add('seriesCallouts');
     }
-    // concentricDonutConfig and polarChartConfig are NO LONGER listed here: the
-    // grammar carries both (`geomDonut(concentric:)` and `.polarConfig(...)`),
+    // Concentric, polar, and Radar configs are carried by their dedicated
+    // grammar verbs (`geomDonut(concentric:)`, `.polarConfig(...)`, and
+    // `.radarConfig(...)`).
     // and the round-trip proof (_firstRadialMismatch) refuses anything they do
     // not reproduce with a named reason. Only radialBarChartConfig stays gated —
     // radial-bar has no grammar mark.
@@ -3291,6 +3445,61 @@ class _GrammarChainEmitter {
     return writer.toString();
   }
 
+  String _emitRadarChartBody(_RadarChartPlan plan) {
+    final writer = DartSourceWriter();
+    _emitRowClass(writer);
+    writer.writeLine();
+    _emitRows(writer, plan.rows);
+    writer.writeLine();
+    writer.writeLine(
+      'final ${options.variableName} = BravenChart.of('
+      '${options.rowsVariableName})',
+    );
+    writer.indented(() {
+      writer.indented(() {
+        for (final item in plan.series) {
+          _emitRadarGeometry(writer, plan.category, item);
+        }
+        if (plan.config != const RadarChartConfig()) {
+          writer.writeLine('.radarConfig(');
+          writer.indented(() {
+            _config.emitRadarChartConfig(writer, null, plan.config);
+            _absorbConfigWarnings();
+          });
+          writer.writeLine(')');
+        }
+        _emitTheme(writer);
+        _emitInteraction(writer);
+        _emitTitle(writer);
+        _emitLegend(writer);
+        writer.writeLine('.build();');
+      });
+    });
+    return writer.toString();
+  }
+
+  void _emitRadarGeometry(
+    DartSourceWriter writer,
+    _Field category,
+    _RadarSeriesPlan plan,
+  ) {
+    final mark = plan.mark;
+    writer.writeLine('.geomRadar(');
+    writer.indented(() {
+      writer.namedArgument('id', DartSourceWriter.stringLiteral(mark.id!));
+      writer.namedArgument('category', category.accessor());
+      writer.namedArgument('value', plan.value.accessor());
+      _optionalString(writer, 'name', mark.name);
+      _optionalColor(writer, 'color', mark.color);
+      _optionalString(writer, 'unit', mark.unit);
+      if (mark.style != null) {
+        _config.emitRadarSeriesStyle(writer, 'style', mark.style!);
+      }
+      _absorbConfigWarnings();
+    });
+    writer.writeLine(')');
+  }
+
   /// Emits one `.geomPolar(...)` — the polar arm of [_emitRadialGeometry], over
   /// the plan's shared category field and this series' own value field.
   void _emitPolarGeometry(
@@ -3476,6 +3685,13 @@ class _GrammarChainEmitter {
           }
           if (mark.selectionStyle != null) {
             _config.emitRadialSelectionStyle(writer, mark.selectionStyle!);
+          }
+        case RadarMark<_SourceRow>():
+          // Radar compositions are planned by `_planRadarChart` and emitted
+          // by `_emitRadarGeometry`; this arm only keeps the sealed radial
+          // hierarchy exhaustive if that invariant is ever violated.
+          if (mark.style != null) {
+            _config.emitRadarSeriesStyle(writer, 'style', mark.style!);
           }
       }
       _absorbConfigWarnings();

@@ -16,6 +16,7 @@ import '../widgets/heatmap_gallery_cards.dart';
 import '../widgets/pie_gallery_cards.dart';
 import '../widgets/polar_column_gallery_cards.dart';
 import '../widgets/radial_bar_gallery_cards.dart';
+import '../widgets/radar_gallery_cards.dart';
 import '../widgets/range_area_gallery_cards.dart';
 import '../widgets/scatter_gallery_cards.dart';
 import '../widgets/synchronized_cartesian_gallery_card.dart';
@@ -186,10 +187,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CHART TYPE GUIDES',
-              title: 'Thirteen chart guides, grouped by visual grammar',
+              title: '14 chart guides, grouped by visual grammar',
               subtitle:
                   'Compare Cartesian families together, then give every radial preview enough room to explain its shape.',
-              count: 13,
+              count: 14,
             ),
           ),
           SliverToBoxAdapter(
@@ -390,6 +391,19 @@ class _GalleryPageState extends State<GalleryPage> {
           const _RadialGalleryGrid(
             gridKey: ValueKey('gallery-concentric-donut-compositions'),
             cards: concentricDonutGalleryCards,
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'RADAR COMPOSITIONS',
+              title: 'Three aligned profiles on one shared radial scale',
+              subtitle:
+                  'Compare budget, team capability, and service health without hiding the exact category values or changing the scale between profiles.',
+              count: 3,
+            ),
+          ),
+          const _RadialGalleryGrid(
+            gridKey: ValueKey('gallery-radar-compositions'),
+            cards: radarGalleryCards,
           ),
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(

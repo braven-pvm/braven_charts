@@ -111,6 +111,12 @@ enum GrammarDiagnosticCode {
   /// geoms.
   polarConfigOnNonPolarSpec,
 
+  /// `.radarConfig(...)` was set on a spec whose marks are not Radar geoms.
+  radarConfigOnNonRadarSpec,
+
+  /// Radar profiles or their shared pane/config violate the family contract.
+  invalidRadarComposition,
+
   /// One polar pane's contract was broken — either by the `.polarConfig(...)`
   /// itself (pane geometry, radial-axis bounds, the grouped sub-band padding,
   /// threshold finiteness or dash-pair parity, the stacked zero baseline) or by
@@ -470,6 +476,24 @@ final class GrammarSpecException implements Exception {
         'A PolarChartConfig was set, but the mark "$markId" is not a '
         'polar-column geom, so the configuration would be silently discarded. '
         'Remove .polarConfig(...), or author the chart with geomPolar(...).',
+      );
+
+  /// `.radarConfig(...)` was set on a spec that holds no Radar geom.
+  factory GrammarSpecException.radarConfigOnNonRadarSpec(String markId) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.radarConfigOnNonRadarSpec,
+        'A RadarChartConfig was set, but the mark "$markId" is not a Radar '
+        'geom, so the configuration would be silently discarded. Remove '
+        '.radarConfig(...), or author the chart with geomRadar(...).',
+      );
+
+  /// The shared Radar category domain, scale, or pane is invalid.
+  factory GrammarSpecException.invalidRadarComposition(String detail) =>
+      GrammarSpecException(
+        GrammarDiagnosticCode.invalidRadarComposition,
+        'The Radar profiles in this plot share one ordered category web and '
+        'one numeric radial scale. Every geomRadar mark and the shared '
+        '.radarConfig(...) must agree. $detail',
       );
 
   /// One polar pane's contract was broken — by its `.polarConfig(...)`, or by

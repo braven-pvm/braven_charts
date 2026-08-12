@@ -9,6 +9,7 @@ import '../models/normalization_mode.dart';
 import '../models/pie_chart_config.dart';
 import '../models/polar_chart_config.dart';
 import '../models/radial_bar_chart_config.dart';
+import '../models/radar_chart_config.dart';
 import '../models/series_callout_config.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_configuration_documents.dart';
@@ -709,6 +710,224 @@ abstract final class ChartConfigurationDocumentCodec {
     } on Object catch (error) {
       return _polarConfigurationFailure(error, path);
     }
+  }
+
+  /// Encodes the pane and category/numeric axes used by Radar charts.
+  static ChartArtifactResult<JsonObjectValue> encodeRadarChart(
+    RadarChartConfig config,
+  ) {
+    const path = r'$.configuration.radarChart';
+    try {
+      config.validate();
+      return ChartArtifactSuccess(
+        value: JsonObjectValue({
+          'radarChart': JsonValue.fromJson({
+            'pane': {
+              'startAngleDegrees': config.pane.startAngleDegrees,
+              'sweepAngleDegrees': config.pane.sweepAngleDegrees,
+              'clockwise': config.pane.clockwise,
+              'innerRadiusFactor': config.pane.innerRadiusFactor,
+              'outerRadiusFactor': config.pane.outerRadiusFactor,
+              'clipMarks': config.pane.clipMarks,
+            },
+            'categoryAxis': {
+              'showLabels': config.categoryAxis.showLabels,
+              'showSpokes': config.categoryAxis.showSpokes,
+              'maximumVisibleLabels': config.categoryAxis.maximumVisibleLabels,
+              'labelOffset': config.categoryAxis.labelOffset,
+              'labelStyle': _encodePolarLabelStyle(
+                config.categoryAxis.labelStyle,
+              ),
+            },
+            'radialAxis': {
+              'minimum': config.radialAxis.minimum,
+              if (config.radialAxis.maximum != null)
+                'maximum': config.radialAxis.maximum,
+              'tickCount': config.radialAxis.tickCount,
+              'showLabels': config.radialAxis.showLabels,
+              'showGridLines': config.radialAxis.showGridLines,
+              'gridShape': config.radialAxis.gridShape.name,
+              'labelPosition': config.radialAxis.labelPosition.name,
+              'labelAngleOffsetDegrees':
+                  config.radialAxis.labelAngleOffsetDegrees,
+              'labelOffset': config.radialAxis.labelOffset,
+              'labelStyle': _encodePolarLabelStyle(
+                config.radialAxis.labelStyle,
+              ),
+            },
+            'webStyle': _encodeRadarWebStyle(config.webStyle),
+          }, path: path),
+        }),
+      );
+    } on Object catch (error) {
+      return _polarConfigurationFailure(error, path);
+    }
+  }
+
+  /// Decodes an optional Radar plot configuration.
+  static ChartArtifactResult<RadarChartConfig?> decodeRadarChart(
+    JsonObjectValue configuration,
+  ) {
+    const path = r'$.configuration.radarChart';
+    final raw = configuration.values['radarChart'];
+    if (raw == null) {
+      return ChartArtifactSuccess<RadarChartConfig?>(value: null);
+    }
+    if (raw is! JsonObjectValue) {
+      return _polarConfigurationFailure(
+        'Radar chart configuration must be an object.',
+        path,
+      );
+    }
+    try {
+      final map = raw.toJson() as Map<String, Object?>;
+      final pane = _requiredMap(map, 'pane', path);
+      final category = _requiredMap(map, 'categoryAxis', path);
+      final radial = _requiredMap(map, 'radialAxis', path);
+      final config = RadarChartConfig(
+        pane: PolarPaneConfig(
+          startAngleDegrees: _requiredDouble(
+            pane,
+            'startAngleDegrees',
+            '$path.pane',
+          ),
+          sweepAngleDegrees: _requiredDouble(
+            pane,
+            'sweepAngleDegrees',
+            '$path.pane',
+          ),
+          clockwise: _requiredBool(pane, 'clockwise', '$path.pane'),
+          innerRadiusFactor: _requiredDouble(
+            pane,
+            'innerRadiusFactor',
+            '$path.pane',
+          ),
+          outerRadiusFactor: _requiredDouble(
+            pane,
+            'outerRadiusFactor',
+            '$path.pane',
+          ),
+          clipMarks: _requiredBool(pane, 'clipMarks', '$path.pane'),
+        ),
+        categoryAxis: RadarCategoryAxisConfig(
+          showLabels: _requiredBool(
+            category,
+            'showLabels',
+            '$path.categoryAxis',
+          ),
+          showSpokes: _requiredBool(
+            category,
+            'showSpokes',
+            '$path.categoryAxis',
+          ),
+          maximumVisibleLabels: _requiredInt(
+            category,
+            'maximumVisibleLabels',
+            '$path.categoryAxis',
+          ),
+          labelOffset: _requiredDouble(
+            category,
+            'labelOffset',
+            '$path.categoryAxis',
+          ),
+          labelStyle: _decodePolarLabelStyle(
+            category['labelStyle'],
+            '$path.categoryAxis.labelStyle',
+          ),
+        ),
+        radialAxis: RadarNumericAxisConfig(
+          minimum: _requiredDouble(radial, 'minimum', '$path.radialAxis'),
+          maximum: _optionalDouble(radial, 'maximum', '$path.radialAxis'),
+          tickCount: _requiredInt(radial, 'tickCount', '$path.radialAxis'),
+          showLabels: _requiredBool(radial, 'showLabels', '$path.radialAxis'),
+          showGridLines: _requiredBool(
+            radial,
+            'showGridLines',
+            '$path.radialAxis',
+          ),
+          gridShape: _requiredEnum(
+            radial,
+            'gridShape',
+            RadarGridShape.values,
+            '$path.radialAxis',
+          ),
+          labelPosition: _requiredEnum(
+            radial,
+            'labelPosition',
+            PolarRadialLabelPosition.values,
+            '$path.radialAxis',
+          ),
+          labelAngleOffsetDegrees: _requiredDouble(
+            radial,
+            'labelAngleOffsetDegrees',
+            '$path.radialAxis',
+          ),
+          labelOffset: _requiredDouble(
+            radial,
+            'labelOffset',
+            '$path.radialAxis',
+          ),
+          labelStyle: _decodePolarLabelStyle(
+            radial['labelStyle'],
+            '$path.radialAxis.labelStyle',
+            defaults: const PolarLabelStyle(fontSize: 10),
+          ),
+        ),
+        webStyle: _decodeRadarWebStyle(map['webStyle'], '$path.webStyle'),
+      );
+      config.validate();
+      return ChartArtifactSuccess(value: config);
+    } on _ConfigurationFormatException catch (error) {
+      return _configurationFailure(error.message, error.path);
+    } on Object catch (error) {
+      return _polarConfigurationFailure(error, path);
+    }
+  }
+
+  static Map<String, Object?> _encodeRadarWebStyle(RadarWebStyle style) => {
+    if (style.ringColor != null) 'ringColor': style.ringColor!.toARGB32(),
+    if (style.ringWidth != null) 'ringWidth': style.ringWidth,
+    if (style.ringDashPattern != null) 'ringDashPattern': style.ringDashPattern,
+    if (style.spokeColor != null) 'spokeColor': style.spokeColor!.toARGB32(),
+    if (style.spokeWidth != null) 'spokeWidth': style.spokeWidth,
+    if (style.spokeDashPattern != null)
+      'spokeDashPattern': style.spokeDashPattern,
+    if (style.boundaryColor != null)
+      'boundaryColor': style.boundaryColor!.toARGB32(),
+    if (style.boundaryWidth != null) 'boundaryWidth': style.boundaryWidth,
+    if (style.boundaryDashPattern != null)
+      'boundaryDashPattern': style.boundaryDashPattern,
+  };
+
+  static RadarWebStyle _decodeRadarWebStyle(Object? value, String path) {
+    if (value == null) return const RadarWebStyle();
+    if (value is! Map) {
+      throw _ConfigurationFormatException(
+        'Radar web style must be an object.',
+        path,
+      );
+    }
+    final map = value.cast<String, Object?>();
+    return RadarWebStyle(
+      ringColor: _optionalConfigurationColor(map['ringColor']),
+      ringWidth: _optionalDouble(map, 'ringWidth', path),
+      ringDashPattern: _optionalNumericList(
+        map['ringDashPattern'],
+        '$path.ringDashPattern',
+      ),
+      spokeColor: _optionalConfigurationColor(map['spokeColor']),
+      spokeWidth: _optionalDouble(map, 'spokeWidth', path),
+      spokeDashPattern: _optionalNumericList(
+        map['spokeDashPattern'],
+        '$path.spokeDashPattern',
+      ),
+      boundaryColor: _optionalConfigurationColor(map['boundaryColor']),
+      boundaryWidth: _optionalDouble(map, 'boundaryWidth', path),
+      boundaryDashPattern: _optionalNumericList(
+        map['boundaryDashPattern'],
+        '$path.boundaryDashPattern',
+      ),
+    );
   }
 
   /// Encodes the pane, track layout, scale guides, and thresholds shared by a
@@ -1546,6 +1765,26 @@ int? _optionalInt(Map<String, Object?> map, String key, String path) {
     );
   }
   return value;
+}
+
+List<double>? _optionalNumericList(Object? value, String path) {
+  if (value == null) return null;
+  if (value is! List) {
+    throw _ConfigurationFormatException(
+      'Optional numeric list is invalid.',
+      path,
+    );
+  }
+  return <double>[
+    for (final item in value)
+      if (item is num && item.toDouble().isFinite)
+        item.toDouble()
+      else
+        throw _ConfigurationFormatException(
+          'Optional numeric list contains an invalid value.',
+          path,
+        ),
+  ];
 }
 
 bool _requiredBool(Map<String, Object?> map, String key, String path) {

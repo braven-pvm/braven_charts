@@ -24,6 +24,8 @@ import '../models/polar_column_chart_series.dart';
 import '../models/radial_bar_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/radar_chart_config.dart';
+import '../models/radar_chart_series.dart';
 import '../models/range_area_chart_series.dart';
 import '../models/range_area_data_point.dart';
 import '../models/range_area_style.dart';
@@ -244,6 +246,7 @@ abstract final class ChartSeriesDocumentCodec {
               'series.polar.column.intervals.v1',
             if (series is RadialBarChartSeries) 'series.radial.bar.v1',
             if (series is GaugeChartSeries) 'series.gauge.v1',
+            if (series is RadarChartSeries) 'series.radar.v1',
             if (series is RadialCategorySeries &&
                 series.sliceGroupingConfig != null)
               'series.radial.grouping.v1',
@@ -846,6 +849,18 @@ abstract final class ChartSeriesDocumentCodec {
                   _map(style, 'polarIntervalStyle'),
                 ),
         ),
+        'radar' => RadarChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points,
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          unit: document.unit,
+          showInLegend: showInLegend,
+          showTrackingAxisLabel: showTrackingAxisLabel,
+          showInTrackingTooltip: showInTrackingTooltip,
+          radarStyle: _decodeRadarSeriesStyle(_map(style, 'radarStyle')),
+        ),
         'radialBar' => RadialBarChartSeries(
           id: document.id,
           name: document.name,
@@ -931,6 +946,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   PieChartSeries() => 'pie',
   DonutChartSeries() => 'donut',
   PolarColumnChartSeries() => 'polarColumn',
+  RadarChartSeries() => 'radar',
   RadialBarChartSeries() => 'radialBar',
   GaugeChartSeries() => 'gauge',
   ChartSeries() => 'base',
@@ -1561,6 +1577,8 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['polarIntervalStyle'] = series.hasIntervals
             ? _encodePolarColumnIntervalStyle(series.intervalStyle)
             : null;
+    case RadarChartSeries():
+      result['radarStyle'] = _encodeRadarSeriesStyle(series.radarStyle);
     case RadialBarChartSeries():
       result
         ..['radialBarMinimum'] = _number(series.minimum)
@@ -1594,6 +1612,120 @@ Map<String, Object?> _encodeSeriesStyle(
   result.removeWhere((_, value) => value == null);
   return result;
 }
+
+Map<String, Object?> _encodeRadarSeriesStyle(RadarSeriesStyle style) => {
+  'strokeWidth': _number(style.strokeWidth),
+  'strokeOpacity': _number(style.strokeOpacity),
+  'strokeDashPattern': [
+    for (final interval in style.strokeDashPattern) _number(interval),
+  ],
+  if (style.fillColor != null) 'fillColor': style.fillColor!.toARGB32(),
+  'fillOpacity': _number(style.fillOpacity),
+  if (style.gradient != null) 'gradient': _encodeRadarGradient(style.gradient!),
+  'shadow': _encodeRadarShadow(style.shadow),
+  'showMarkers': style.showMarkers,
+  'markerShape': style.markerShape.name,
+  'markerRadius': _number(style.markerRadius),
+  if (style.markerFillColor != null)
+    'markerFillColor': style.markerFillColor!.toARGB32(),
+  if (style.markerBorderColor != null)
+    'markerBorderColor': style.markerBorderColor!.toARGB32(),
+  'markerBorderWidth': _number(style.markerBorderWidth),
+  'showDataLabels': style.showDataLabels,
+  'maximumVisibleDataLabels': style.maximumVisibleDataLabels,
+  'dataLabelOffset': _number(style.dataLabelOffset),
+  'dataLabelStyle': _encodePolarLabelStyle(style.dataLabelStyle),
+  'animationMode': style.animationMode.name,
+};
+
+RadarSeriesStyle _decodeRadarSeriesStyle(Map<String, Object?> value) =>
+    RadarSeriesStyle(
+      strokeWidth: _double(value, 'strokeWidth'),
+      strokeOpacity: _double(value, 'strokeOpacity'),
+      strokeDashPattern: _decodeDashPattern(value['strokeDashPattern']),
+      fillColor: _optionalColor(
+        value['fillColor'],
+        r'$.style.radarStyle.fillColor',
+      ),
+      fillOpacity: _double(value, 'fillOpacity'),
+      gradient: _optionalMap(value, 'gradient') == null
+          ? null
+          : _decodeRadarGradient(_map(value, 'gradient')),
+      shadow: _optionalMap(value, 'shadow') == null
+          ? const RadarShadowStyle()
+          : _decodeRadarShadow(_map(value, 'shadow')),
+      showMarkers: _bool(value, 'showMarkers'),
+      markerShape:
+          _optionalEnum(
+            value['markerShape'],
+            SeriesMarkerShape.values,
+            r'$.style.radarStyle.markerShape',
+          ) ??
+          SeriesMarkerShape.circle,
+      markerRadius: _double(value, 'markerRadius'),
+      markerFillColor: _optionalColor(
+        value['markerFillColor'],
+        r'$.style.radarStyle.markerFillColor',
+      ),
+      markerBorderColor: _optionalColor(
+        value['markerBorderColor'],
+        r'$.style.radarStyle.markerBorderColor',
+      ),
+      markerBorderWidth: _optionalDouble(value['markerBorderWidth']) ?? 0,
+      showDataLabels: _bool(value, 'showDataLabels'),
+      maximumVisibleDataLabels:
+          _optionalInt(value['maximumVisibleDataLabels']) ?? 24,
+      dataLabelOffset: _optionalDouble(value['dataLabelOffset']) ?? 8,
+      dataLabelStyle: value['dataLabelStyle'] == null
+          ? const PolarLabelStyle()
+          : _decodePolarLabelStyle(value['dataLabelStyle']),
+      animationMode: _enum(value, 'animationMode', RadarAnimationMode.values),
+    );
+
+Map<String, Object?> _encodeRadarGradient(RadarGradientStyle style) => {
+  'enabled': style.enabled,
+  'type': style.type.name,
+  if (style.startColor != null) 'startColor': style.startColor!.toARGB32(),
+  if (style.endColor != null) 'endColor': style.endColor!.toARGB32(),
+  'startLightnessShift': _number(style.startLightnessShift),
+  'endLightnessShift': _number(style.endLightnessShift),
+  'angleDegrees': _number(style.angleDegrees),
+};
+
+RadarGradientStyle _decodeRadarGradient(Map<String, Object?> value) =>
+    RadarGradientStyle(
+      enabled: _bool(value, 'enabled'),
+      type: _enum(value, 'type', RadarGradientType.values),
+      startColor: _optionalColor(
+        value['startColor'],
+        r'$.style.radarStyle.gradient.startColor',
+      ),
+      endColor: _optionalColor(
+        value['endColor'],
+        r'$.style.radarStyle.gradient.endColor',
+      ),
+      startLightnessShift: _double(value, 'startLightnessShift'),
+      endLightnessShift: _double(value, 'endLightnessShift'),
+      angleDegrees: _double(value, 'angleDegrees'),
+    );
+
+Map<String, Object?> _encodeRadarShadow(RadarShadowStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'blurRadius': _number(style.blurRadius),
+  'spreadRadius': _number(style.spreadRadius),
+  'offsetX': _number(style.offset.dx),
+  'offsetY': _number(style.offset.dy),
+  'opacity': _number(style.opacity),
+};
+
+RadarShadowStyle _decodeRadarShadow(Map<String, Object?> value) =>
+    RadarShadowStyle(
+      color: _optionalColor(value['color'], r'$.style.radarStyle.shadow.color'),
+      blurRadius: _double(value, 'blurRadius'),
+      spreadRadius: _double(value, 'spreadRadius'),
+      offset: Offset(_double(value, 'offsetX'), _double(value, 'offsetY')),
+      opacity: _double(value, 'opacity'),
+    );
 
 Map<String, Object?> _encodeHeatmapColorScale(HeatmapColorScale scale) => {
   'type': scale.type.name,
