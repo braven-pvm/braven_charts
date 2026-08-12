@@ -16,6 +16,7 @@ const _mediaCapturePath = 'tool/capture_pubdev_static_media_test.dart';
 const _showcaseAppPath = 'example/lib/showcase/showcase_app.dart';
 const _pubspecPath = 'pubspec.yaml';
 const _heroMediaPath = 'doc/screenshots/chart_family_grid.png';
+const _pubdevCoverMediaPath = 'doc/screenshots/pubdev_package_cover.png';
 const _chartFamilyTopicPath = 'doc/topics/chart_families.md';
 
 const _generatedSections = <String>[
@@ -232,8 +233,8 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     errors.add('chartFamilies must contain exactly 13 built-in families.');
   }
   _validateFamilyCountCopy(root, families, errors);
-  if (gallery.length < 12 || gallery.length > 18) {
-    errors.add('gallery must contain between 12 and 18 curated entries.');
+  if (gallery.length < 12 || gallery.length > 24) {
+    errors.add('gallery must contain between 12 and 24 curated entries.');
   }
   final galleryGroupCounts = <String, int>{};
   for (final item in gallery) {
@@ -243,9 +244,9 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     }
   }
   for (final entry in galleryGroupCounts.entries) {
-    if (entry.value != 3) {
+    if (entry.value < 2 || entry.value > 3) {
       errors.add(
-        'Gallery group ${entry.key} must contain exactly 3 items; '
+        'Gallery group ${entry.key} must contain 2 or 3 items; '
         'found ${entry.value}.',
       );
     }
@@ -254,8 +255,16 @@ List<String> _validateCatalog(Directory root, Map<String, dynamic> catalog) {
     root,
     _heroMediaPath,
     field: 'README hero media',
-    width: 1488,
-    height: 1592,
+    width: 1920,
+    height: 1080,
+    errors: errors,
+  );
+  _requireMediaDimensions(
+    root,
+    _pubdevCoverMediaPath,
+    field: 'pub.dev package cover media',
+    width: 1920,
+    height: 1080,
     errors: errors,
   );
   _validateHeroCaptureFamilies(root, families, errors);

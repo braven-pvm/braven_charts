@@ -37,11 +37,16 @@ typedef _ScatterViewport = ({
 });
 
 class LineChartsPage extends StatelessWidget {
-  const LineChartsPage({super.key});
+  const LineChartsPage({super.key, this.mediaCapturePreset});
+
+  /// Renders one preset without showcase chrome for deterministic package media.
+  final String? mediaCapturePreset;
 
   @override
-  Widget build(BuildContext context) =>
-      const _CartesianChartTypePage(family: _CartesianFamily.line);
+  Widget build(BuildContext context) => _CartesianChartTypePage(
+    family: _CartesianFamily.line,
+    mediaCapturePreset: mediaCapturePreset,
+  );
 }
 
 class AreaChartsPage extends StatelessWidget {
@@ -305,6 +310,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   @override
   void initState() {
     super.initState();
+    if (widget.mediaCapturePreset?.toLowerCase() == 'race') {
+      _lineRaceLoop = true;
+    }
     _lineRaceController = LineRaceController(
       config: _lineRaceF1Config.copyWith(
         durationPerFrame: Duration(milliseconds: _lineRaceDurationMs),
@@ -328,6 +336,14 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         (preset) => preset.label.toLowerCase() == requestedPreset,
       );
       if (index >= 0) _presetIndex = index;
+    }
+    if (widget.mediaCapturePreset?.toLowerCase() == 'race') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _lineRaceController.seekToFrame(0);
+          _lineRaceController.play();
+        }
+      });
     }
     _authoredPresetIndex = _presetIndex;
     final requestedView = Uri.base.queryParameters['view'];

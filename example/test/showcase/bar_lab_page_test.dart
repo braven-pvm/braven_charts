@@ -10,6 +10,24 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   Widget subject() => const MaterialApp(home: Scaffold(body: BarLabPage()));
 
+  testWidgets('bar race media route renders and advances without page chrome', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: BarLabPage(mediaCapturePreset: 'race')),
+    );
+    await tester.pump(const Duration(milliseconds: 900));
+
+    expect(find.byKey(const ValueKey('bar-lab-chart')), findsOneWidget);
+    expect(find.byKey(const ValueKey('bar-race-period')), findsOneWidget);
+    expect(find.byType(ChartPageLayout), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('point-popup option is available for every bar preset', (
     tester,
   ) async {

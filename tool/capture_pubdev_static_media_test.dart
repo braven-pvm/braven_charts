@@ -461,11 +461,23 @@ void main() {
       outputDirectory: outputDirectory,
       captures: captures,
     );
+    await _captureChartFamilyShowcase(
+      tester,
+      outputDirectory: outputDirectory,
+      captures: captures,
+    );
     await _captureFamilyPairs(
       tester,
       outputDirectory: outputDirectory,
       captures: captures,
     );
+  });
+
+  testWidgets('capture pub.dev package cover', (tester) async {
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+
+    await _capturePubdevPackageCover(tester, outputDirectory: outputDirectory);
   });
 }
 
@@ -1181,6 +1193,239 @@ Future<void> _captureChartTypeStrip(
   await tester.pumpWidget(const SizedBox.shrink());
 }
 
+Future<void> _captureChartFamilyShowcase(
+  WidgetTester tester, {
+  required Directory outputDirectory,
+  required List<_ChartTypeCapture> captures,
+}) async {
+  const logicalSize = Size(1920, 1080);
+  const rows = <List<_ChartFamilyShowcaseSlot>>[
+    [
+      _ChartFamilyShowcaseSlot('chart_type_line.png', flex: 2),
+      _ChartFamilyShowcaseSlot('chart_type_area.png'),
+      _ChartFamilyShowcaseSlot('chart_type_range_area.png'),
+    ],
+    [
+      _ChartFamilyShowcaseSlot('chart_type_scatter.png'),
+      _ChartFamilyShowcaseSlot('chart_type_bar.png', flex: 2),
+      _ChartFamilyShowcaseSlot('chart_type_candlestick.png'),
+    ],
+    [
+      _ChartFamilyShowcaseSlot('chart_type_heatmap.png', flex: 2),
+      _ChartFamilyShowcaseSlot('chart_type_pie.png'),
+      _ChartFamilyShowcaseSlot('chart_type_donut.png'),
+    ],
+    [
+      _ChartFamilyShowcaseSlot('chart_type_concentric.png'),
+      _ChartFamilyShowcaseSlot('chart_type_polar_column.png'),
+      _ChartFamilyShowcaseSlot('chart_type_radial_bar.png'),
+      _ChartFamilyShowcaseSlot('chart_type_gauge.png'),
+    ],
+  ];
+  final capturesByFile = {
+    for (final capture in captures) capture.asset.fileName: capture,
+  };
+  final showcaseFiles = rows
+      .expand((row) => row)
+      .map((slot) => slot.fileName)
+      .toSet();
+  expect(showcaseFiles, capturesByFile.keys.toSet());
+
+  final boundaryKey = GlobalKey();
+  await tester.binding.setSurfaceSize(logicalSize);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(fontFamily: _captureFontFamily),
+      home: RepaintBoundary(
+        key: boundaryKey,
+        child: Material(
+          color: const Color(0xFFF8F6FC),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) ...[
+                  if (rowIndex > 0) const SizedBox(height: 14),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (
+                          var columnIndex = 0;
+                          columnIndex < rows[rowIndex].length;
+                          columnIndex++
+                        ) ...[
+                          if (columnIndex > 0) const SizedBox(width: 14),
+                          Expanded(
+                            flex: rows[rowIndex][columnIndex].flex,
+                            child: _ChartFamilyShowcaseTile(
+                              capture:
+                                  capturesByFile[rows[rowIndex][columnIndex]
+                                      .fileName]!,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  final boundaryContext = boundaryKey.currentContext!;
+  await tester.runAsync(() async {
+    for (final capture in captures) {
+      await precacheImage(MemoryImage(capture.bytes), boundaryContext);
+    }
+  });
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
+
+  final boundary =
+      boundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final byteData = await tester.runAsync(() async {
+    final image = await boundary.toImage();
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return data;
+  });
+  expect(byteData, isNotNull);
+  final output = File(
+    '${outputDirectory.path}${Platform.pathSeparator}chart_family_grid.png',
+  );
+  await tester.runAsync(
+    () => output.writeAsBytes(byteData!.buffer.asUint8List(), flush: true),
+  );
+  // ignore: avoid_print
+  print('Wrote ${output.path} (1920x1080)');
+  await tester.pumpWidget(const SizedBox.shrink());
+}
+
+Future<void> _capturePubdevPackageCover(
+  WidgetTester tester, {
+  required Directory outputDirectory,
+}) async {
+  const logicalSize = Size(1920, 1080);
+  const sourceFiles = <String>[
+    'technical_indicator_stack.png',
+    'polar_seasonal_rose.png',
+    'hero_threshold.png',
+    'scatter_hexbin_density.png',
+  ];
+  final sourceBytes = <String, Uint8List>{};
+  for (final fileName in sourceFiles) {
+    final file = File(
+      '${outputDirectory.path}${Platform.pathSeparator}$fileName',
+    );
+    expect(
+      file.existsSync(),
+      isTrue,
+      reason: 'Generate $fileName before generating the pub.dev package cover.',
+    );
+    sourceBytes[fileName] = file.readAsBytesSync();
+  }
+
+  final boundaryKey = GlobalKey();
+  await tester.binding.setSurfaceSize(logicalSize);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: RepaintBoundary(
+        key: boundaryKey,
+        child: Material(
+          color: const Color(0xFFF8F6FC),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              children: [
+                Expanded(
+                  flex: 11,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 13,
+                        child: _PubdevCoverTile(
+                          bytes: sourceBytes['technical_indicator_stack.png']!,
+                          alignment: const Alignment(0, -0.2),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        flex: 7,
+                        child: _PubdevCoverTile(
+                          bytes: sourceBytes['polar_seasonal_rose.png']!,
+                          alignment: Alignment.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  flex: 9,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 8,
+                        child: _PubdevCoverTile(
+                          bytes: sourceBytes['hero_threshold.png']!,
+                          alignment: Alignment.center,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        flex: 12,
+                        child: _PubdevCoverTile(
+                          bytes: sourceBytes['scatter_hexbin_density.png']!,
+                          alignment: Alignment.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  final boundaryContext = boundaryKey.currentContext!;
+  await tester.runAsync(() async {
+    for (final bytes in sourceBytes.values) {
+      await precacheImage(MemoryImage(bytes), boundaryContext);
+    }
+  });
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
+
+  final boundary =
+      boundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final byteData = await tester.runAsync(() async {
+    final image = await boundary.toImage();
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return data;
+  });
+  expect(byteData, isNotNull);
+  final output = File(
+    '${outputDirectory.path}${Platform.pathSeparator}pubdev_package_cover.png',
+  );
+  await tester.runAsync(
+    () => output.writeAsBytes(byteData!.buffer.asUint8List(), flush: true),
+  );
+  // ignore: avoid_print
+  print('Wrote ${output.path} (1920x1080)');
+  await tester.pumpWidget(const SizedBox.shrink());
+}
+
 Future<void> _captureFamilyPairs(
   WidgetTester tester, {
   required Directory outputDirectory,
@@ -1395,6 +1640,105 @@ class _ChartTypeTile extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChartFamilyShowcaseSlot {
+  const _ChartFamilyShowcaseSlot(this.fileName, {this.flex = 1});
+
+  final String fileName;
+  final int flex;
+}
+
+class _ChartFamilyShowcaseTile extends StatelessWidget {
+  const _ChartFamilyShowcaseTile({required this.capture});
+
+  final _ChartTypeCapture capture;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: capture.asset.theme.backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFD8D3E0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x120F172A),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ColoredBox(
+              color: capture.asset.headerColor,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 7, 14, 8),
+                child: Text(
+                  capture.asset.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                  softWrap: false,
+                  style: TextStyle(
+                    color: capture.asset.headerTextColor,
+                    fontFamily: _captureFontFamily,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Image.memory(
+                capture.bytes,
+                fit: BoxFit.fill,
+                alignment: Alignment.center,
+                filterQuality: FilterQuality.high,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PubdevCoverTile extends StatelessWidget {
+  const _PubdevCoverTile({required this.bytes, required this.alignment});
+
+  final Uint8List bytes;
+  final Alignment alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFD8D3E0), width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x180F172A),
+            blurRadius: 18,
+            offset: Offset(0, 7),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          alignment: alignment,
+          filterQuality: FilterQuality.high,
         ),
       ),
     );

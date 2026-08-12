@@ -483,6 +483,12 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     if (capture == 'polar-column-gallery') {
       return const PolarColumnGalleryMediaPanel();
     }
+    if (capture == 'line-race') {
+      return const LineChartsPage(mediaCapturePreset: 'Race');
+    }
+    if (capture == 'bar-race') {
+      return const BarLabPage(mediaCapturePreset: 'race');
+    }
     if (capture == 'mobile-apps') {
       return const MobileAppsShowcasePage();
     }

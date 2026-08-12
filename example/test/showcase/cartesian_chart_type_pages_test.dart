@@ -42,6 +42,24 @@ void main() {
     'scatter': const ScatterChartsPage(),
   };
 
+  testWidgets(
+    'line race media route renders and advances without page chrome',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: LineChartsPage(mediaCapturePreset: 'Race')),
+      );
+      await tester.pump(const Duration(milliseconds: 900));
+
+      expect(find.byKey(const ValueKey('line-race-chart')), findsOneWidget);
+      expect(find.byType(ChartPageLayout), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final entry in subjects.entries) {
     testWidgets('${entry.key} guide exposes generated source centrally', (
       tester,

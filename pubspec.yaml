@@ -18,12 +18,12 @@ topics:
 
 screenshots:
   - description: >-
-      Multi-axis training profile with a power area, heart-rate response,
-      stage bands, target threshold, tracking, and a highlighted peak.
-    path: doc/screenshots/hero_threshold.png
+      Four production-shaped chart compositions combining financial indicators,
+      a seasonal polar rose, multi-axis tracking, and hexbin density.
+    path: doc/screenshots/pubdev_package_cover.png
   - description: >-
-      Six phone-native sports, wellness, training, habit, and mobility
-      experiences rendered as real Flutter chart compositions.
+      Nine phone-native sports, wellness, finance, weather, training, habit,
+      energy, and mobility experiences rendered as real Flutter compositions.
     path: doc/screenshots/mobile_apps_showcase.png
   - description: >-
       Typed Chart Grammar authoring beside the rendered Area and Line chart,

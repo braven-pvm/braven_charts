@@ -536,7 +536,7 @@
       "id": "mobile-apps",
       "title": "Mobile app compositions",
       "group": "Interaction and display",
-      "summary": "See six focused endurance, recovery, live-sport, training, habit, and mobility layouts built for phone screens.",
+      "summary": "See nine focused sports, wellness, finance, weather, training, habit, energy, and mobility layouts built for phone screens.",
       "page": "mobile-apps"
     },
     {
@@ -848,6 +848,26 @@
       "alt": "Area-correct seasonal rose chart across twelve months",
       "asset": "doc/screenshots/polar_seasonal_rose.png",
       "page": "polar-column"
+    },
+    {
+      "id": "line-race",
+      "title": "Championship line race",
+      "group": "Race charts in motion",
+      "alt": "Animated line race with cumulative championship standings and moving endpoint labels",
+      "asset": "doc/screenshots/line_race_demo.gif",
+      "page": "line-charts",
+      "preset": "race",
+      "animated": true
+    },
+    {
+      "id": "bar-race",
+      "title": "Population bar race",
+      "group": "Race charts in motion",
+      "alt": "Animated horizontal bar race with changing population ranks and period indicator",
+      "asset": "doc/screenshots/bar_race_demo.gif",
+      "page": "bar-charts",
+      "preset": "race",
+      "animated": true
     }
   ]
 }
