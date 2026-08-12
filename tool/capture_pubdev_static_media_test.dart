@@ -1199,37 +1199,63 @@ Future<void> _captureChartFamilyShowcase(
   required List<_ChartTypeCapture> captures,
 }) async {
   const logicalSize = Size(1920, 1080);
-  const rows = <List<_ChartFamilyShowcaseSlot>>[
+  const rows = <List<String>>[
     [
-      _ChartFamilyShowcaseSlot('chart_type_line.png', flex: 2),
-      _ChartFamilyShowcaseSlot('chart_type_area.png'),
-      _ChartFamilyShowcaseSlot('chart_type_range_area.png'),
+      'chart_type_line.png',
+      'chart_type_area.png',
+      'chart_type_range_area.png',
+      'range_area_forecast_fan.png',
     ],
     [
-      _ChartFamilyShowcaseSlot('chart_type_scatter.png'),
-      _ChartFamilyShowcaseSlot('chart_type_bar.png', flex: 2),
-      _ChartFamilyShowcaseSlot('chart_type_candlestick.png'),
+      'chart_type_scatter.png',
+      'chart_type_bar.png',
+      'chart_type_candlestick.png',
+      'technical_indicator_stack.png',
     ],
     [
-      _ChartFamilyShowcaseSlot('chart_type_heatmap.png', flex: 2),
-      _ChartFamilyShowcaseSlot('chart_type_pie.png'),
-      _ChartFamilyShowcaseSlot('chart_type_donut.png'),
+      'chart_type_heatmap.png',
+      'scatter_hexbin_density.png',
+      'chart_type_pie.png',
+      'chart_type_donut.png',
     ],
     [
-      _ChartFamilyShowcaseSlot('chart_type_concentric.png'),
-      _ChartFamilyShowcaseSlot('chart_type_polar_column.png'),
-      _ChartFamilyShowcaseSlot('chart_type_radial_bar.png'),
-      _ChartFamilyShowcaseSlot('chart_type_gauge.png'),
+      'chart_type_concentric.png',
+      'chart_type_polar_column.png',
+      'chart_type_radial_bar.png',
+      'chart_type_gauge.png',
     ],
   ];
-  final capturesByFile = {
-    for (final capture in captures) capture.asset.fileName: capture,
+  final entriesByFile = <String, _ChartFamilyShowcaseEntry>{
+    for (final capture in captures)
+      capture.asset.fileName: _ChartFamilyShowcaseEntry(
+        label: capture.asset.label,
+        bytes: capture.bytes,
+      ),
   };
-  final showcaseFiles = rows
-      .expand((row) => row)
-      .map((slot) => slot.fileName)
-      .toSet();
-  expect(showcaseFiles, capturesByFile.keys.toSet());
+  const advancedCaptures = <({String fileName, String label})>[
+    (fileName: 'range_area_forecast_fan.png', label: 'Forecast fan'),
+    (fileName: 'technical_indicator_stack.png', label: 'Technical stack'),
+    (fileName: 'scatter_hexbin_density.png', label: 'Hexbin density'),
+  ];
+  for (final advanced in advancedCaptures) {
+    final file = File(
+      '${outputDirectory.path}${Platform.pathSeparator}${advanced.fileName}',
+    );
+    expect(
+      file.existsSync(),
+      isTrue,
+      reason:
+          'Generate ${advanced.fileName} before generating the chart-family grid.',
+    );
+    entriesByFile[advanced.fileName] = _ChartFamilyShowcaseEntry(
+      label: advanced.label,
+      bytes: file.readAsBytesSync(),
+    );
+  }
+  final showcaseFiles = rows.expand((row) => row).toList(growable: false);
+  expect(showcaseFiles, hasLength(16));
+  expect(showcaseFiles.toSet(), hasLength(16));
+  expect(entriesByFile.keys, containsAll(showcaseFiles));
 
   final boundaryKey = GlobalKey();
   await tester.binding.setSurfaceSize(logicalSize);
@@ -1258,11 +1284,9 @@ Future<void> _captureChartFamilyShowcase(
                         ) ...[
                           if (columnIndex > 0) const SizedBox(width: 14),
                           Expanded(
-                            flex: rows[rowIndex][columnIndex].flex,
                             child: _ChartFamilyShowcaseTile(
-                              capture:
-                                  capturesByFile[rows[rowIndex][columnIndex]
-                                      .fileName]!,
+                              entry:
+                                  entriesByFile[rows[rowIndex][columnIndex]]!,
                             ),
                           ),
                         ],
@@ -1279,8 +1303,8 @@ Future<void> _captureChartFamilyShowcase(
   );
   final boundaryContext = boundaryKey.currentContext!;
   await tester.runAsync(() async {
-    for (final capture in captures) {
-      await precacheImage(MemoryImage(capture.bytes), boundaryContext);
+    for (final entry in entriesByFile.values) {
+      await precacheImage(MemoryImage(entry.bytes), boundaryContext);
     }
   });
   await tester.pump();
@@ -1646,23 +1670,23 @@ class _ChartTypeTile extends StatelessWidget {
   }
 }
 
-class _ChartFamilyShowcaseSlot {
-  const _ChartFamilyShowcaseSlot(this.fileName, {this.flex = 1});
+class _ChartFamilyShowcaseEntry {
+  const _ChartFamilyShowcaseEntry({required this.label, required this.bytes});
 
-  final String fileName;
-  final int flex;
+  final String label;
+  final Uint8List bytes;
 }
 
 class _ChartFamilyShowcaseTile extends StatelessWidget {
-  const _ChartFamilyShowcaseTile({required this.capture});
+  const _ChartFamilyShowcaseTile({required this.entry});
 
-  final _ChartTypeCapture capture;
+  final _ChartFamilyShowcaseEntry entry;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: capture.asset.theme.backgroundColor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFD8D3E0)),
         boxShadow: const [
@@ -1675,33 +1699,42 @@ class _ChartFamilyShowcaseTile extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(13),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            ColoredBox(
-              color: capture.asset.headerColor,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 7, 14, 8),
-                child: Text(
-                  capture.asset.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.fade,
-                  softWrap: false,
-                  style: TextStyle(
-                    color: capture.asset.headerTextColor,
-                    fontFamily: _captureFontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+            Image.memory(
+              entry.bytes,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.high,
+            ),
+            Positioned(
+              left: 10,
+              top: 10,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xE61B2030),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0x33FFFFFF)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    entry.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.fade,
+                    softWrap: false,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: _captureFontFamily,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: Image.memory(
-                capture.bytes,
-                fit: BoxFit.fill,
-                alignment: Alignment.center,
-                filterQuality: FilterQuality.high,
               ),
             ),
           ],
