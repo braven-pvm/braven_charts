@@ -1571,10 +1571,8 @@ class ChartRenderBox extends RenderBox {
     // Update both transforms to show the new data range (for streaming/dynamic data)
     // CRITICAL: Update _originalTransform too, so pan constraints are calculated from correct bounds
     if (_transform != null && axis != null) {
-      // CRITICAL FIX: Detect if this is a chart type switch (complete data range change)
-      // vs a streaming update (incremental data range change).
-      // If the new axis bounds don't overlap with the original transform bounds,
-      // this indicates switching to a different chart/dataset - reset transforms completely.
+      // Replace the local Y baseline when the new domain is disjoint or its
+      // normalization changes. Neither condition identifies a new X timeline.
       final originalYMin = _originalTransform?.dataYMin ?? _transform!.dataYMin;
       final originalYMax = _originalTransform?.dataYMax ?? _transform!.dataYMax;
       final newYMin = axis.dataMin;
@@ -1589,10 +1587,16 @@ class ChartRenderBox extends RenderBox {
       final normalizationChanged = isNormalizedRange != wasNormalizedRange;
 
       if (!rangesOverlap || normalizationChanged) {
-        // Chart type switch detected - reset transforms to use new bounds
-        _transform = null;
-        _originalTransform = null;
-        // Let performLayout() recreate transforms with new bounds
+        // A Y-domain replacement does not imply a new X timeline. Hosts may
+        // fit Y to the visible price range, or replace a series on the same
+        // timeline. Preserve X; actual X-domain changes are handled by
+        // setXAxis/performLayout and explicit reset commands.
+        _transform = _transform!.copyWith(dataYMin: newYMin, dataYMax: newYMax);
+        _originalTransform = _originalTransform?.copyWith(
+          dataYMin: newYMin,
+          dataYMax: newYMax,
+        );
+        _seriesCacheManager.invalidate();
       } else {
         _transform = _transform!.copyWith(
           dataYMin: axis.dataMin,

@@ -2063,6 +2063,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     if (seriesChanged ||
         transitionKeyChanged ||
+        widget.xAxisConfig != oldWidget.xAxisConfig ||
+        widget.yAxis != oldWidget.yAxis ||
         widget.theme != oldWidget.theme ||
         widget.annotations != oldWidget.annotations ||
         widget.concentricDonutConfig != oldWidget.concentricDonutConfig ||

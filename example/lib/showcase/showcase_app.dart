@@ -20,6 +20,7 @@ import 'pages/concentric_donut_page.dart';
 import 'pages/donut_charts_page.dart';
 import 'pages/documentation_page.dart';
 import 'pages/gallery_page.dart';
+import 'pages/financial_viewport_lab_page.dart';
 import 'pages/gauge_charts_page.dart';
 import 'pages/heatmap_charts_page.dart';
 import 'pages/technical_indicators_page.dart';
@@ -236,6 +237,14 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.monitor_heart,
       page: TechnicalIndicatorsPage(),
       routeSlug: 'technical-indicators',
+      parentSlug: 'financial',
+    ),
+    const NavDestination(
+      label: 'Viewport Lab',
+      icon: Icons.swipe_outlined,
+      selectedIcon: Icons.swipe,
+      page: FinancialViewportLabPage(),
+      routeSlug: 'financial-viewport-lab',
       parentSlug: 'financial',
     ),
     const NavDestination(
