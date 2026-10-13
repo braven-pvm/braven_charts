@@ -1,5 +1,6 @@
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
+
+part 'chart_custom_color_dialog.dart';
 
 /// Shared compact color palette used by chart editors and option surfaces.
 ///
@@ -149,79 +150,14 @@ class ChartColorPalette extends StatelessWidget {
     final iconColor = selected
         ? _contrastColor(Color.alphaBlend(buttonColor, colors.surface))
         : colors.onSurfaceVariant;
-    return Tooltip(
-      message: 'Choose custom color',
-      child: InkWell(
-        key: ValueKey('$keyPrefix-custom'),
-        onTap: () => _chooseCustomColor(context),
-        borderRadius: BorderRadius.zero,
-        child: Container(
-          alignment: Alignment.center,
-          color: buttonColor,
-          child: Icon(Icons.palette_outlined, size: 16, color: iconColor),
-        ),
-      ),
+    return _CustomColorButton(
+      key: ValueKey('$keyPrefix-custom-button'),
+      keyPrefix: keyPrefix,
+      initialColor: value ?? customColorFallback ?? _presetColors[7],
+      buttonColor: buttonColor,
+      iconColor: iconColor,
+      onChanged: onChanged,
     );
-  }
-
-  Future<void> _chooseCustomColor(BuildContext context) async {
-    var selectedColor = value ?? customColorFallback ?? _presetColors[7];
-    final result = await showDialog<Color>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Color'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            color: selectedColor,
-            onColorChanged: (color) => selectedColor = color,
-            width: 40,
-            height: 40,
-            borderRadius: 4,
-            spacing: 5,
-            runSpacing: 5,
-            wheelDiameter: 200,
-            heading: Text(
-              'Select color',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            subheading: Text(
-              'Select color shade',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            wheelSubheading: Text(
-              'Selected color and its shades',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            showMaterialName: true,
-            showColorName: true,
-            showColorCode: true,
-            pickersEnabled: const <ColorPickerType, bool>{
-              ColorPickerType.both: false,
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: true,
-              ColorPickerType.bw: false,
-              ColorPickerType.custom: false,
-              ColorPickerType.wheel: true,
-            },
-            enableShadesSelection: true,
-            enableOpacity: true,
-            showRecentColors: true,
-            maxRecentColors: 5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(selectedColor),
-            child: const Text('Select'),
-          ),
-        ],
-      ),
-    );
-    if (result != null) onChanged(result);
   }
 
   Color _contrastColor(Color color) {
