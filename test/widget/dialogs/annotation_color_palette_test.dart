@@ -197,6 +197,37 @@ void main() {
       expect(changes.single, const Color(0xFF00FFFF));
     });
 
+    testWidgets('preview text meets contrast on mid-tone custom colors', (
+      tester,
+    ) async {
+      await _mountPalette(tester, <Color?>[], value: const Color(0xFF888888));
+      await _openCustom(tester);
+      final text = find.text('#FF888888');
+      final foreground = tester.widget<Text>(text).style!.color!;
+      final container = tester.widget<Container>(
+        find.ancestor(of: text, matching: find.byType(Container)).first,
+      );
+      final background = (container.decoration! as BoxDecoration).color!;
+      expect(_contrastRatio(foreground, background), greaterThanOrEqualTo(4.5));
+    });
+
+    testWidgets('selected shade checkmarks meet icon contrast', (tester) async {
+      await _mountPalette(tester, <Color?>[], value: Colors.blueGrey.shade300);
+      await _openCustom(tester);
+      final swatch = find.byTooltip('Shade 300');
+      final foreground = tester
+          .widget<Icon>(
+            find.descendant(of: swatch, matching: find.byType(Icon)),
+          )
+          .color!;
+      final background = tester
+          .widget<Material>(
+            find.descendant(of: swatch, matching: find.byType(Material)),
+          )
+          .color!;
+      expect(_contrastRatio(foreground, background), greaterThanOrEqualTo(3));
+    });
+
     testWidgets('exposes descriptive names for color adjustment sliders', (
       tester,
     ) async {
@@ -344,4 +375,10 @@ Future<void> _slide(WidgetTester tester, String label, double fraction) async {
     Offset(rect.left + 24 + (rect.width - 48) * fraction, rect.center.dy),
   );
   await tester.pumpAndSettle();
+}
+
+double _contrastRatio(Color first, Color second) {
+  final a = first.computeLuminance();
+  final b = second.computeLuminance();
+  return a > b ? (a + 0.05) / (b + 0.05) : (b + 0.05) / (a + 0.05);
 }

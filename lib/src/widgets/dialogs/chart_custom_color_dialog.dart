@@ -192,6 +192,13 @@ class _CustomColorDialogState extends State<_CustomColorDialog> {
     });
   }
 
+  Color _foregroundColor(Color background) {
+    final luminance = background.computeLuminance();
+    final blackContrast = (luminance + 0.05) / 0.05;
+    final whiteContrast = 1.05 / (luminance + 0.05);
+    return blackContrast >= whiteContrast ? Colors.black : Colors.white;
+  }
+
   Widget _swatch(Color color, String label, VoidCallback onTap) {
     final selected = _color.toARGB32() == color.toARGB32();
     // Choices remain discoverable even when the draft is fully transparent;
@@ -212,12 +219,7 @@ class _CustomColorDialogState extends State<_CustomColorDialog> {
               borderRadius: BorderRadius.circular(6),
               onTap: onTap,
               child: selected
-                  ? Icon(
-                      Icons.check,
-                      color: displayColor.computeLuminance() > 0.5
-                          ? Colors.black
-                          : Colors.white,
-                    )
+                  ? Icon(Icons.check, color: _foregroundColor(displayColor))
                   : null,
             ),
           ),
@@ -256,6 +258,10 @@ class _CustomColorDialogState extends State<_CustomColorDialog> {
     final shades = _shadeColor is MaterialAccentColor
         ? const [100, 200, 400, 700]
         : const [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
+    final previewColor = Color.alphaBlend(
+      _color,
+      Theme.of(context).colorScheme.surface,
+    );
     return AlertDialog(
       title: const Text('Select Color'),
       scrollable: true,
@@ -269,10 +275,7 @@ class _CustomColorDialogState extends State<_CustomColorDialog> {
               height: 48,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Color.alphaBlend(
-                  _color,
-                  Theme.of(context).colorScheme.surface,
-                ),
+                color: previewColor,
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
                   color: Theme.of(context).colorScheme.outlineVariant,
@@ -281,16 +284,7 @@ class _CustomColorDialogState extends State<_CustomColorDialog> {
               alignment: Alignment.center,
               child: Text(
                 '#${_hexCode(_color)}',
-                style: TextStyle(
-                  color:
-                      Color.alphaBlend(
-                            _color,
-                            Theme.of(context).colorScheme.surface,
-                          ).computeLuminance() >
-                          0.5
-                      ? Colors.black
-                      : Colors.white,
-                ),
+                style: TextStyle(color: _foregroundColor(previewColor)),
               ),
             ),
             const SizedBox(height: 16),
