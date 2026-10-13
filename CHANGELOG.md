@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.18.1 - 2026-10-13
+
 ### Fixed
 
 - Resolve changed Cartesian axis configurations without discarding the
@@ -14,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep constrained pan deltas within the requested direction and magnitude,
   preventing horizontal/diagonal touch drags from snapping a host-fitted
   viewport back toward its original bounds.
+
+### Changed
+
+- Replace the private custom-color picker dependency with Flutter-native
+  primary/accent swatches, shades, HSV controls, hex input, opacity, and recent
+  colors. The compact editor palette and public API remain unchanged;
+  draft colors are applied only on Select and discarded on Cancel or dismissal.
+  This removes the outdated direct dependency without raising the declared
+  Flutter 3.35 / Dart 3.9 floors.
 
 ## 0.18.0 - 2026-08-12
 
