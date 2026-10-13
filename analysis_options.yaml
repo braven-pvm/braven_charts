@@ -5,6 +5,7 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
+    - build/** # Generated output; prevents Flutter's automatic config migration
     - specs/** # Contract interface files not meant to be compiled yet
     - docs/** # Documentation examples with unimplemented API references
     - docs/archive_release_1.0/** # Archived release 1.0 source snapshots

@@ -1,5 +1,11 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    - build/**
+    - web/**
+    - windows/**
+
 # Additional lint rules for the example app
 linter:
   rules:
