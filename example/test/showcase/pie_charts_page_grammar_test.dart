@@ -172,11 +172,9 @@ void main() {
     // are the only thing this page cannot carry, so a SECOND omission
     // appearing is a regression and must not slip past this gate.
     expect(generated.isComplete, isFalse);
-    expect(
-      generated.warnings.map((warning) => warning.code).toList(),
-      <String>[ChartSourceWarningCodes.runtimeValueOmitted],
-      reason: generated.warnings.map((warning) => warning.message).join('\n'),
-    );
+    expect(generated.warnings.map((warning) => warning.code).toList(), <String>[
+      ChartSourceWarningCodes.runtimeValueOmitted,
+    ], reason: generated.warnings.map((warning) => warning.message).join('\n'));
 
     // The FLOOR. Every assertion above reads the emitted TEXT, and text
     // assertions cannot tell a chain that would compile from one that only

@@ -5,6 +5,82 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final fingerDy in [0.0, 1.5]) {
+    testWidgets(
+      'touch pan never invents or amplifies Y movement after host fitting '
+      '(fingerDy=$fingerDy)',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final group = ChartInteractionGroupController();
+        addTearDown(group.dispose);
+        final hostKey = GlobalKey<_FinancialHostState>();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: _FinancialHost(
+                key: hostKey,
+                group: group,
+                categorical: false,
+                onViewportChanged: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        // This host-provided Y domain overlaps the original source domain,
+        // but starts below its old pan-constraint baseline.
+        hostKey.currentState!.setPriceBounds(80, 100);
+        await tester.pumpAndSettle();
+        ChartRenderBox box(int index) =>
+            find
+                    .byWidgetPredicate(
+                      (widget) =>
+                          widget.runtimeType.toString() == '_ChartRenderWidget',
+                    )
+                    .evaluate()
+                    .elementAt(index)
+                    .renderObject!
+                as ChartRenderBox;
+        expect(box(0).transform!.dataYMin, closeTo(80, 1e-7));
+        final chart = find.byType(BravenChartPlus).first;
+        final gesture = await tester.startGesture(
+          tester.getCenter(chart),
+          kind: PointerDeviceKind.touch,
+        );
+        await gesture.moveBy(const Offset(24, 0));
+        await tester.pump();
+        final initialX = box(0).transform!.dataXMin;
+        for (var step = 0; step < 20; step++) {
+          final previous = box(0).transform!;
+          await gesture.moveBy(Offset(1.5, step.isEven ? fingerDy : -fingerDy));
+          final moved = box(0).transform!;
+          expect(
+            (moved.dataYMin - previous.dataYMin).abs(),
+            lessThanOrEqualTo(fingerDy * previous.dataPerPixelY + 1e-7),
+          );
+          await tester.pump(const Duration(milliseconds: 16));
+          if (fingerDy == 0) {
+            expect(box(0).transform!.dataYMin, closeTo(80, 1e-7));
+            expect(box(0).transform!.dataYMax, closeTo(100, 1e-7));
+          }
+          expect(box(0).transform!.dataXRange, closeTo(100, 1e-7));
+          expect(
+            box(1).transform!.dataXMin,
+            closeTo(box(0).transform!.dataXMin, 1e-7),
+          );
+        }
+        expect(box(0).transform!.dataXMin, lessThan(initialX - 1));
+        await gesture.up();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   for (final categorical in [false, true]) {
     testWidgets(
       'financial touch pan keeps the initialized window during host rebuilds '

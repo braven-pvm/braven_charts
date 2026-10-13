@@ -15,14 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preventing horizontal/diagonal touch drags from snapping a host-fitted
   viewport back toward its original bounds.
 
-### Added
-
-- A Financial viewport lab in the showcase (`?page=financial-viewport-lab`)
-  with synchronized price/oscillator panes, host-computed visible-candle Y
-  fitting, numeric/category labels, refresh controls and mobile regressions.
-  Native axis-specific navigation and visible-Y fitting remain separate
-  proposals; the lab does not add those public API options.
-
 ## 0.18.0 - 2026-08-12
 
 ### Added

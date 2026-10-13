@@ -158,9 +158,13 @@ void main(List<String> arguments) {
 }
 
 String _formatGeneratedDart(Directory root, String source) {
-  final temporaryDirectory = Directory.systemTemp.createTempSync(
-    'braven-public-docs-',
-  );
+  // Keep the formatter in the destination package's language/config context.
+  // A system-temp file otherwise uses the running SDK's language version,
+  // which can disagree with formatting the generated file in the showcase.
+  final temporaryDirectory = root
+      .file(_generatedCatalogPath)
+      .parent
+      .createTempSync('.braven-public-docs-');
   final temporaryFile = temporaryDirectory.file('public_docs_catalog.g.dart');
   try {
     temporaryFile.writeAsStringSync(source);

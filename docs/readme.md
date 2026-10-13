@@ -15,7 +15,6 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 
 - [guides/chart-types.md](guides/chart-types.md) - Chart type overview
 - [guides/mobile-interaction.md](guides/mobile-interaction.md) - Scroll-first Browse gestures, long-press tracking, and opt-in short-tap selection
-- [guides/financial-viewport.md](guides/financial-viewport.md) - Synchronized Candlestick panes, host-computed visible Y bounds, and mobile viewport review
 - [guides/bar-charts.md](guides/bar-charts.md) - Bar orientation, composition, floating ranges, styling, labels, and interaction
 - [guides/radar-charts.md](guides/radar-charts.md) - Radar and Spider category domains, shared scales, webs, profiles, interaction, portability, and accessibility
 - [guides/pie-charts.md](guides/pie-charts.md) - Pie data, advanced theming, labels, legends, selection, motion, tables, artifacts, and accessibility

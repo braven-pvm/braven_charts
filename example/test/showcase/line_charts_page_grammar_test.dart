@@ -97,20 +97,16 @@ void main() {
     expect(series, hasLength(4), reason: 'the Interpolation preset draws four');
     for (var index = 0; index < series.length; index++) {
       final entry = series[index];
-      expect(
-        marks[index].map(_argumentName).toList(),
-        <String>[
-          'id',
-          'y',
-          'name',
-          'color',
-          'strokeWidth',
-          'dashPattern',
-          'interpolation',
-          'showDataPointMarkers',
-        ],
-        reason: 'mark $index of the emitted chain:\n${marks[index]}',
-      );
+      expect(marks[index].map(_argumentName).toList(), <String>[
+        'id',
+        'y',
+        'name',
+        'color',
+        'strokeWidth',
+        'dashPattern',
+        'interpolation',
+        'showDataPointMarkers',
+      ], reason: 'mark $index of the emitted chain:\n${marks[index]}');
       expect(marks[index], contains("id: '${entry.id}',"));
       expect(marks[index], contains("name: '${entry.name}',"));
       expect(marks[index], contains('color: ${_colorLiteral(entry.color!)},'));
@@ -181,22 +177,18 @@ void main() {
         contains("unit: '${series[index].unit}',"),
         reason: 'mark $index dropped its unit:\n${marks[index]}',
       );
-      expect(
-        marks[index].map(_argumentName).toList(),
-        <String>[
-          'id',
-          'y',
-          'name',
-          'color',
-          'unit',
-          'strokeWidth',
-          'dashPattern',
-          'interpolation',
-          'showDataPointMarkers',
-          'dataPointLabels',
-        ],
-        reason: 'mark $index of the emitted chain:\n${marks[index]}',
-      );
+      expect(marks[index].map(_argumentName).toList(), <String>[
+        'id',
+        'y',
+        'name',
+        'color',
+        'unit',
+        'strokeWidth',
+        'dashPattern',
+        'interpolation',
+        'showDataPointMarkers',
+        'dataPointLabels',
+      ], reason: 'mark $index of the emitted chain:\n${marks[index]}');
     }
 
     await tester.runAsync(

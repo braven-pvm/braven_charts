@@ -80,22 +80,18 @@ void main() {
     expect(series, hasLength(2), reason: 'the Layered preset draws two');
     for (var index = 0; index < series.length; index++) {
       final entry = series[index];
-      expect(
-        marks[index].map(_argumentName).toList(),
-        <String>[
-          'id',
-          'y',
-          'name',
-          'color',
-          'fillOpacity',
-          'strokeWidth',
-          'dashPattern',
-          'interpolation',
-          'showDataPointMarkers',
-          'dataPointLabels',
-        ],
-        reason: 'mark $index of the emitted chain:\n${marks[index]}',
-      );
+      expect(marks[index].map(_argumentName).toList(), <String>[
+        'id',
+        'y',
+        'name',
+        'color',
+        'fillOpacity',
+        'strokeWidth',
+        'dashPattern',
+        'interpolation',
+        'showDataPointMarkers',
+        'dataPointLabels',
+      ], reason: 'mark $index of the emitted chain:\n${marks[index]}');
       expect(marks[index], contains("id: '${entry.id}',"));
       expect(marks[index], contains("name: '${entry.name}',"));
       expect(marks[index], contains('color: ${_colorLiteral(entry.color!)},'));
