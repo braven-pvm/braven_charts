@@ -226,6 +226,19 @@ class ViewportConstraints {
               dataPerPixelY // Reverse Y inversion
         : actualDataDy / dataPerPixelY;
 
-    return (dx: actualPlotDx, dy: actualPlotDy);
+    // A host-restored/fitted viewport can already lie outside the original
+    // baseline. Clamping its absolute position must not manufacture movement:
+    // that would snap an untouched axis, amplify a tiny drag, or reverse it.
+    // Permit gradual movement back in bounds, but never more than requested.
+    return (
+      dx: actualPlotDx.clamp(
+        requestedPlotDx < 0 ? requestedPlotDx : 0,
+        requestedPlotDx > 0 ? requestedPlotDx : 0,
+      ),
+      dy: actualPlotDy.clamp(
+        requestedPlotDy < 0 ? requestedPlotDy : 0,
+        requestedPlotDy > 0 ? requestedPlotDy : 0,
+      ),
+    );
   }
 }

@@ -5,431 +5,401 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test(
-    'representative generated Dart parses and analyzes',
-    () async {
-      final series = const LineChartSeries(
-        id: 'power',
-        name: 'Power',
-        points: [ChartDataPoint(x: 0, y: 148), ChartDataPoint(x: 1, y: 162)],
-      );
-      final scatter = const ScatterChartSeries(
-        id: 'risk',
-        name: 'Assets',
-        points: [ChartDataPoint(x: 1, y: 2, colorValue: 80, opacityValue: 92)],
-        colorEncoding: ScatterColorEncoding(
-          colors: [Color(0xFF16A34A), Color(0xFFDC2626)],
-          scaleType: ScatterColorScaleType.piecewise,
-          thresholds: [60],
-          bandLabels: ['Normal', 'Critical'],
-        ),
-        opacityEncoding: ScatterOpacityEncoding(
-          minimumOpacity: 0.15,
-          maximumOpacity: 0.95,
-          label: 'Confidence',
-          unit: '%',
-        ),
-        jitter: ScatterJitterConfig(xAmplitude: 9, yAmplitude: 5, seed: 31),
-        dataPointLabels: DataPointLabelConfig(
-          show: true,
-          content: DataPointLabelContent.pointLabel,
-          collisionPolicy: DataPointLabelCollisionPolicy.reposition,
-          markerGap: 6,
-        ),
-      );
-      final candles = CandlestickChartSeries(
-        id: 'price',
-        unit: 'USD',
-        points: [
-          CandlestickDataPoint(
-            x: 0,
-            open: 146,
-            high: 153,
-            low: 144,
-            close: 151,
-          ),
-          CandlestickDataPoint(
-            x: 1,
-            open: 151,
-            high: 164,
-            low: 149,
-            close: 158,
-          ),
-        ],
-        candlestickStyle: const CandlestickChartStyle(
-          bodyFillMode: CandlestickBodyFillMode.filled,
-          bodyCornerRadius: 2,
-        ),
-      );
-      final range = RangeAreaChartSeries(
-        id: 'forecast',
-        unit: 'W',
-        points: [
-          RangeAreaDataPoint(x: 0, low: 142, high: 156),
-          RangeAreaDataPoint.gap(x: .5),
-          RangeAreaDataPoint(x: 1, low: 154, high: 169),
-        ],
-        fillGradient: const AreaGradient(
-          colors: [Color(0x332563EB), Color(0x992563EB)],
-        ),
-        upperBoundaryStyle: const RangeAreaBoundaryStyle(dashPattern: [4, 2]),
-        pathAnimation: const PathAnimationStyle(
-          entranceMode: PathEntranceAnimationMode.reveal,
-        ),
-      );
-      final heatmap = HeatmapChartSeries(
-        id: 'availability',
-        name: 'Availability',
+  test('representative generated Dart parses and analyzes', () async {
+    final series = const LineChartSeries(
+      id: 'power',
+      name: 'Power',
+      points: [ChartDataPoint(x: 0, y: 148), ChartDataPoint(x: 1, y: 162)],
+    );
+    final scatter = const ScatterChartSeries(
+      id: 'risk',
+      name: 'Assets',
+      points: [ChartDataPoint(x: 1, y: 2, colorValue: 80, opacityValue: 92)],
+      colorEncoding: ScatterColorEncoding(
+        colors: [Color(0xFF16A34A), Color(0xFFDC2626)],
+        scaleType: ScatterColorScaleType.piecewise,
+        thresholds: [60],
+        bandLabels: ['Normal', 'Critical'],
+      ),
+      opacityEncoding: ScatterOpacityEncoding(
+        minimumOpacity: 0.15,
+        maximumOpacity: 0.95,
+        label: 'Confidence',
         unit: '%',
-        points: [
-          HeatmapDataPoint(x: 0, y: 0, value: 99.8, pointKey: 'api-morning'),
-          HeatmapDataPoint.missing(x: 1, y: 0, pointKey: 'api-evening'),
+      ),
+      jitter: ScatterJitterConfig(xAmplitude: 9, yAmplitude: 5, seed: 31),
+      dataPointLabels: DataPointLabelConfig(
+        show: true,
+        content: DataPointLabelContent.pointLabel,
+        collisionPolicy: DataPointLabelCollisionPolicy.reposition,
+        markerGap: 6,
+      ),
+    );
+    final candles = CandlestickChartSeries(
+      id: 'price',
+      unit: 'USD',
+      points: [
+        CandlestickDataPoint(x: 0, open: 146, high: 153, low: 144, close: 151),
+        CandlestickDataPoint(x: 1, open: 151, high: 164, low: 149, close: 158),
+      ],
+      candlestickStyle: const CandlestickChartStyle(
+        bodyFillMode: CandlestickBodyFillMode.filled,
+        bodyCornerRadius: 2,
+      ),
+    );
+    final range = RangeAreaChartSeries(
+      id: 'forecast',
+      unit: 'W',
+      points: [
+        RangeAreaDataPoint(x: 0, low: 142, high: 156),
+        RangeAreaDataPoint.gap(x: .5),
+        RangeAreaDataPoint(x: 1, low: 154, high: 169),
+      ],
+      fillGradient: const AreaGradient(
+        colors: [Color(0x332563EB), Color(0x992563EB)],
+      ),
+      upperBoundaryStyle: const RangeAreaBoundaryStyle(dashPattern: [4, 2]),
+      pathAnimation: const PathAnimationStyle(
+        entranceMode: PathEntranceAnimationMode.reveal,
+      ),
+    );
+    final heatmap = HeatmapChartSeries(
+      id: 'availability',
+      name: 'Availability',
+      unit: '%',
+      points: [
+        HeatmapDataPoint(x: 0, y: 0, value: 99.8, pointKey: 'api-morning'),
+        HeatmapDataPoint.missing(x: 1, y: 0, pointKey: 'api-evening'),
+      ],
+      colorScale: HeatmapColorScale.diverging(
+        lowColor: const Color(0xFFDC2626),
+        midpointColor: const Color(0xFFF59E0B),
+        highColor: const Color(0xFF16A34A),
+        midpoint: 99,
+        minimumValue: 95,
+        maximumValue: 100,
+        missingColor: const Color(0xFFCBD5E1),
+        label: 'Availability',
+        unit: '%',
+      ),
+      showCellLabels: true,
+      cornerRadius: 3,
+    );
+    final snapshot = ChartDocumentSnapshot(
+      document: ChartDocument(
+        documentId: 'generated-source-compile',
+        revision: 4,
+        series: [
+          _success(ChartSeriesDocumentCodec.encode(candles)).value,
+          _success(ChartSeriesDocumentCodec.encode(series)).value,
+          _success(ChartSeriesDocumentCodec.encode(scatter)).value,
+          _success(ChartSeriesDocumentCodec.encode(range)).value,
+          _success(ChartSeriesDocumentCodec.encode(heatmap)).value,
         ],
-        colorScale: HeatmapColorScale.diverging(
-          lowColor: const Color(0xFFDC2626),
-          midpointColor: const Color(0xFFF59E0B),
-          highColor: const Color(0xFF16A34A),
-          midpoint: 99,
-          minimumValue: 95,
-          maximumValue: 100,
-          missingColor: const Color(0xFFCBD5E1),
-          label: 'Availability',
-          unit: '%',
-        ),
-        showCellLabels: true,
-        cornerRadius: 3,
-      );
-      final snapshot = ChartDocumentSnapshot(
-        document: ChartDocument(
-          documentId: 'generated-source-compile',
-          revision: 4,
-          series: [
-            _success(ChartSeriesDocumentCodec.encode(candles)).value,
-            _success(ChartSeriesDocumentCodec.encode(series)).value,
-            _success(ChartSeriesDocumentCodec.encode(scatter)).value,
-            _success(ChartSeriesDocumentCodec.encode(range)).value,
-            _success(ChartSeriesDocumentCodec.encode(heatmap)).value,
-          ],
-          annotations: [
-            _success(
-              ChartAnnotationDocumentCodec.encode(
-                LegendAnnotation(
-                  id: 'legend',
-                  series: [series],
-                  legendStyle: const LegendStyle(
-                    position: LegendPosition.bottomLeft,
-                  ),
-                ),
-              ),
-            ).value,
-            _success(
-              ChartAnnotationDocumentCodec.encode(
-                LegendAnnotation(
-                  id: 'confidence-key',
-                  opacityScale: const LegendOpacityScale(
-                    label: 'Confidence',
-                    color: Color(0xFF2563EB),
-                    minimumOpacity: 0.15,
-                    maximumOpacity: 0.95,
-                    minimumLabel: '40 %',
-                    midpointLabel: '70 %',
-                    maximumLabel: '100 %',
-                  ),
-                ),
-              ),
-            ).value,
-            _success(
-              ChartAnnotationDocumentCodec.encode(
-                LegendAnnotation(
-                  id: 'risk-key',
-                  colorScale: const LegendColorScale(
-                    label: 'Risk score',
-                    colors: [Color(0xFF16A34A), Color(0xFFDC2626)],
-                    minimumLabel: '0',
-                    maximumLabel: '100',
-                    type: LegendColorScaleType.piecewise,
-                    segmentLabels: ['Normal', 'Critical'],
-                  ),
-                ),
-              ),
-            ).value,
-          ],
-          xAxis: _success(
-            ChartAxisDocumentCodec.encodeXAxis(
-              const XAxisConfig(label: 'Elapsed interval'),
-            ),
-          ).value,
-          axes: [
-            _success(
-              ChartAxisDocumentCodec.encodeYAxis(
-                YAxisConfig(position: YAxisPosition.left, label: 'Power'),
-              ),
-            ).value,
-          ],
-          theme: _success(
-            ChartThemeDocumentCodec.encode(
-              ChartTheme.dark.copyWith(
-                backgroundColor: const Color(0xFF08111F),
-                pieChartTheme: const PieChartTheme(
-                  cornerRadius: 5,
-                  gradient: PieGradientStyle(type: PieGradientType.radial),
+        annotations: [
+          _success(
+            ChartAnnotationDocumentCodec.encode(
+              LegendAnnotation(
+                id: 'legend',
+                series: [series],
+                legendStyle: const LegendStyle(
+                  position: LegendPosition.bottomLeft,
                 ),
               ),
             ),
           ).value,
-          interaction: _success(
-            ChartInteractionDocumentCodec.encode(
-              const InteractionConfig(
-                selection: ChartSelectionConfig(
-                  operation: ChartSelectionOperation.toggle,
-                  clearOnBackgroundTap: false,
+          _success(
+            ChartAnnotationDocumentCodec.encode(
+              LegendAnnotation(
+                id: 'confidence-key',
+                opacityScale: const LegendOpacityScale(
+                  label: 'Confidence',
+                  color: Color(0xFF2563EB),
+                  minimumOpacity: 0.15,
+                  maximumOpacity: 0.95,
+                  minimumLabel: '40 %',
+                  midpointLabel: '70 %',
+                  maximumLabel: '100 %',
                 ),
               ),
             ),
           ).value,
-          configuration: _success(
-            ChartConfigurationDocumentCodec.encodeSeriesCallouts(
-              const SeriesCalloutConfig(
-                enabled: true,
-                side: SeriesCalloutSide.left,
-                series: {
-                  'power': SeriesCalloutSpec(
-                    label: 'Peak power',
-                    priority: 5,
-                    color: Color(0xFF60A5FA),
-                  ),
-                },
+          _success(
+            ChartAnnotationDocumentCodec.encode(
+              LegendAnnotation(
+                id: 'risk-key',
+                colorScale: const LegendColorScale(
+                  label: 'Risk score',
+                  colors: [Color(0xFF16A34A), Color(0xFFDC2626)],
+                  minimumLabel: '0',
+                  maximumLabel: '100',
+                  type: LegendColorScaleType.piecewise,
+                  segmentLabels: ['Normal', 'Critical'],
+                ),
               ),
             ),
           ).value,
-        ),
-        viewState: ChartViewState(
-          visibleBounds: const ChartBoundsDocument(
-            xMin: 0,
-            xMax: 1,
-            yMin: 140,
-            yMax: 170,
+        ],
+        xAxis: _success(
+          ChartAxisDocumentCodec.encodeXAxis(
+            const XAxisConfig(label: 'Elapsed interval'),
           ),
-          selectedSeriesId: 'power',
-          selectedPointRefs: const [
-            ChartPointRef(seriesId: 'power', pointIndex: 1),
+        ).value,
+        axes: [
+          _success(
+            ChartAxisDocumentCodec.encodeYAxis(
+              YAxisConfig(position: YAxisPosition.left, label: 'Power'),
+            ),
+          ).value,
+        ],
+        theme: _success(
+          ChartThemeDocumentCodec.encode(
+            ChartTheme.dark.copyWith(
+              backgroundColor: const Color(0xFF08111F),
+              pieChartTheme: const PieChartTheme(
+                cornerRadius: 5,
+                gradient: PieGradientStyle(type: PieGradientType.radial),
+              ),
+            ),
+          ),
+        ).value,
+        interaction: _success(
+          ChartInteractionDocumentCodec.encode(
+            const InteractionConfig(
+              selection: ChartSelectionConfig(
+                operation: ChartSelectionOperation.toggle,
+                clearOnBackgroundTap: false,
+              ),
+            ),
+          ),
+        ).value,
+        configuration: _success(
+          ChartConfigurationDocumentCodec.encodeSeriesCallouts(
+            const SeriesCalloutConfig(
+              enabled: true,
+              side: SeriesCalloutSide.left,
+              series: {
+                'power': SeriesCalloutSpec(
+                  label: 'Peak power',
+                  priority: 5,
+                  color: Color(0xFF60A5FA),
+                ),
+              },
+            ),
+          ),
+        ).value,
+      ),
+      viewState: ChartViewState(
+        visibleBounds: const ChartBoundsDocument(
+          xMin: 0,
+          xMax: 1,
+          yMin: 140,
+          yMax: 170,
+        ),
+        selectedSeriesId: 'power',
+        selectedPointRefs: const [
+          ChartPointRef(seriesId: 'power', pointIndex: 1),
+        ],
+        selectionExpression: ChartSelectionExpressionDocument(
+          clauses: [
+            ChartSelectionClauseDocument.xInterval(
+              minimumInclusive: 0.25,
+              maximumInclusive: 0.75,
+              seriesIds: const {'power'},
+            ),
+            ChartSelectionClauseDocument.rectangle(
+              minimumXInclusive: 0.35,
+              maximumXInclusive: 0.65,
+              minimumYInclusive: 145,
+              maximumYInclusive: 165,
+              seriesIds: const {'power'},
+            ),
           ],
-          selectionExpression: ChartSelectionExpressionDocument(
-            clauses: [
-              ChartSelectionClauseDocument.xInterval(
-                minimumInclusive: 0.25,
-                maximumInclusive: 0.75,
-                seriesIds: const {'power'},
-              ),
-              ChartSelectionClauseDocument.rectangle(
-                minimumXInclusive: 0.35,
-                maximumXInclusive: 0.65,
-                minimumYInclusive: 145,
-                maximumYInclusive: 165,
-                seriesIds: const {'power'},
-              ),
-            ],
+        ),
+      ),
+    );
+    final generated = _success(
+      ChartDartSourceGenerator.generate(
+        snapshot,
+        options: const ChartDartSourceOptions(includeViewState: true),
+      ),
+    ).value;
+
+    final fixture = File(
+      '${Directory.current.path}${Platform.pathSeparator}.dart_tool'
+      '${Platform.pathSeparator}chart_generated_source_compile_test.dart',
+    );
+    await fixture.writeAsString(
+      '// ignore_for_file: prefer_const_constructors\n${generated.source}',
+    );
+    try {
+      final format = await Process.run(
+        'dart',
+        ['format', '--output=none', fixture.path],
+        workingDirectory: Directory.current.path,
+        runInShell: Platform.isWindows,
+      );
+      expect(format.exitCode, 0, reason: '${format.stdout}\n${format.stderr}');
+
+      final analyze = await Process.run(
+        'dart',
+        ['analyze', '--no-fatal-warnings', fixture.path],
+        workingDirectory: Directory.current.path,
+        runInShell: Platform.isWindows,
+      );
+      expect(
+        analyze.exitCode,
+        0,
+        reason: '${analyze.stdout}\n${analyze.stderr}',
+      );
+    } finally {
+      if (await fixture.exists()) await fixture.delete();
+    }
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('generated stacked Polar Column Dart parses and analyzes', () async {
+    final series = <PolarColumnChartSeries>[
+      PolarColumnChartSeries.fromMap(
+        id: 'new',
+        unit: 'orders',
+        values: const {'North': 45, 'East': 38, 'South': 41},
+        polarStyle: const PolarColumnStyle(
+          cornerRadius: 8,
+          opacity: 0.3,
+          borderColor: Color(0xFF102030),
+          borderWidth: 2,
+          dataLabelRadialPosition: 0.68,
+          dataLabelStyle: PolarLabelStyle(
+            color: Color(0xFFFFFFFF),
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
           ),
+          gradient: PolarColumnGradientStyle(
+            startColor: Color(0xFF38BDF8),
+            endColor: Color(0xFF1D4ED8),
+          ),
+          shadow: PolarColumnShadowStyle(
+            color: Color(0xFF172554),
+            blurRadius: 8,
+            spreadRadius: 1,
+            offset: Offset(0, 3),
+            opacity: 0.28,
+          ),
+          animationMode: PolarColumnAnimationMode.sweep,
         ),
-      );
-      final generated = _success(
-        ChartDartSourceGenerator.generate(
-          snapshot,
-          options: const ChartDartSourceOptions(includeViewState: true),
+      ),
+      PolarColumnChartSeries.fromMap(
+        id: 'churn',
+        unit: 'orders',
+        values: const {'North': -12, 'East': -18, 'South': -9},
+        polarStyle: const PolarColumnStyle(
+          cornerRadius: 8,
+          opacity: 0.85,
+          borderColor: Color(0xFF102030),
+          borderWidth: 2,
+          showDataLabels: false,
         ),
-      ).value;
-
-      final fixture = File(
-        '${Directory.current.path}${Platform.pathSeparator}.dart_tool'
-        '${Platform.pathSeparator}chart_generated_source_compile_test.dart',
-      );
-      await fixture.writeAsString(
-        '// ignore_for_file: prefer_const_constructors\n${generated.source}',
-      );
-      try {
-        final format = await Process.run(
-          'dart',
-          ['format', '--output=none', fixture.path],
-          workingDirectory: Directory.current.path,
-          runInShell: Platform.isWindows,
-        );
-        expect(
-          format.exitCode,
-          0,
-          reason: '${format.stdout}\n${format.stderr}',
-        );
-
-        final analyze = await Process.run(
-          'dart',
-          ['analyze', '--no-fatal-warnings', fixture.path],
-          workingDirectory: Directory.current.path,
-          runInShell: Platform.isWindows,
-        );
-        expect(
-          analyze.exitCode,
-          0,
-          reason: '${analyze.stdout}\n${analyze.stderr}',
-        );
-      } finally {
-        if (await fixture.exists()) await fixture.delete();
-      }
-    },
-    timeout: const Timeout(Duration(minutes: 2)),
-  );
-
-  test(
-    'generated stacked Polar Column Dart parses and analyzes',
-    () async {
-      final series = <PolarColumnChartSeries>[
-        PolarColumnChartSeries.fromMap(
-          id: 'new',
-          unit: 'orders',
-          values: const {'North': 45, 'East': 38, 'South': 41},
-          polarStyle: const PolarColumnStyle(
-            cornerRadius: 8,
-            opacity: 0.3,
-            borderColor: Color(0xFF102030),
-            borderWidth: 2,
-            dataLabelRadialPosition: 0.68,
-            dataLabelStyle: PolarLabelStyle(
-              color: Color(0xFFFFFFFF),
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+      ),
+    ];
+    const polarConfig = PolarChartConfig(
+      pane: PolarPaneConfig(
+        startAngleDegrees: 15,
+        sweepAngleDegrees: 270,
+        innerRadiusFactor: 0.2,
+        outerRadiusFactor: 0.9,
+      ),
+      angularAxis: PolarCategoryAxisConfig(
+        labelOffset: 12,
+        labelStyle: PolarLabelStyle(
+          color: Color(0xFF475569),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      radialAxis: PolarNumericAxisConfig(
+        minimum: -40,
+        maximum: 80,
+        scaleMode: PolarRadialScaleMode.linear,
+        tickCount: 6,
+        labelPosition: PolarRadialLabelPosition.end,
+        labelAngleOffsetDegrees: 20,
+        labelOffset: 6,
+        labelStyle: PolarLabelStyle(color: Color(0xFF0F766E), fontSize: 10),
+      ),
+      composition: PolarColumnCompositionConfig(
+        mode: PolarColumnCompositionMode.stacked,
+      ),
+    );
+    final configuration = _success(
+      ChartConfigurationDocumentCodec.encodePolarChart(polarConfig),
+    ).value;
+    final snapshot = ChartDocumentSnapshot(
+      document: ChartDocument(
+        documentId: 'generated-polar-compile',
+        revision: 1,
+        series: [
+          for (final item in series)
+            _success(ChartSeriesDocumentCodec.encode(item)).value,
+        ],
+        xAxis: _success(
+          ChartAxisDocumentCodec.encodeXAxis(const XAxisConfig()),
+        ).value,
+        axes: [
+          _success(
+            ChartAxisDocumentCodec.encodeYAxis(
+              YAxisConfig(position: YAxisPosition.left),
             ),
-            gradient: PolarColumnGradientStyle(
-              startColor: Color(0xFF38BDF8),
-              endColor: Color(0xFF1D4ED8),
-            ),
-            shadow: PolarColumnShadowStyle(
-              color: Color(0xFF172554),
-              blurRadius: 8,
-              spreadRadius: 1,
-              offset: Offset(0, 3),
-              opacity: 0.28,
-            ),
-            animationMode: PolarColumnAnimationMode.sweep,
-          ),
-        ),
-        PolarColumnChartSeries.fromMap(
-          id: 'churn',
-          unit: 'orders',
-          values: const {'North': -12, 'East': -18, 'South': -9},
-          polarStyle: const PolarColumnStyle(
-            cornerRadius: 8,
-            opacity: 0.85,
-            borderColor: Color(0xFF102030),
-            borderWidth: 2,
-            showDataLabels: false,
-          ),
-        ),
-      ];
-      const polarConfig = PolarChartConfig(
-        pane: PolarPaneConfig(
-          startAngleDegrees: 15,
-          sweepAngleDegrees: 270,
-          innerRadiusFactor: 0.2,
-          outerRadiusFactor: 0.9,
-        ),
-        angularAxis: PolarCategoryAxisConfig(
-          labelOffset: 12,
-          labelStyle: PolarLabelStyle(
-            color: Color(0xFF475569),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        radialAxis: PolarNumericAxisConfig(
-          minimum: -40,
-          maximum: 80,
-          scaleMode: PolarRadialScaleMode.linear,
-          tickCount: 6,
-          labelPosition: PolarRadialLabelPosition.end,
-          labelAngleOffsetDegrees: 20,
-          labelOffset: 6,
-          labelStyle: PolarLabelStyle(color: Color(0xFF0F766E), fontSize: 10),
-        ),
-        composition: PolarColumnCompositionConfig(
-          mode: PolarColumnCompositionMode.stacked,
-        ),
-      );
-      final configuration = _success(
-        ChartConfigurationDocumentCodec.encodePolarChart(polarConfig),
-      ).value;
-      final snapshot = ChartDocumentSnapshot(
-        document: ChartDocument(
-          documentId: 'generated-polar-compile',
-          revision: 1,
-          series: [
-            for (final item in series)
-              _success(ChartSeriesDocumentCodec.encode(item)).value,
-          ],
-          xAxis: _success(
-            ChartAxisDocumentCodec.encodeXAxis(const XAxisConfig()),
           ).value,
-          axes: [
-            _success(
-              ChartAxisDocumentCodec.encodeYAxis(
-                YAxisConfig(position: YAxisPosition.left),
-              ),
-            ).value,
-          ],
-          theme: _success(
-            ChartThemeDocumentCodec.encode(ChartTheme.light),
-          ).value,
-          interaction: _success(
-            ChartInteractionDocumentCodec.encode(const InteractionConfig()),
-          ).value,
-          configuration: configuration,
-          requiredCapabilities: const {
-            'chart.polar.config.v1',
-            'chart.polar.multiple-series.v1',
-            'chart.polar.stacked-series.v1',
-            PolarChartConfig.labelAppearanceCapability,
-            PolarColumnChartSeries.appearanceCapability,
-          },
-        ),
-      );
-      final generated = _success(
-        ChartDartSourceGenerator.generate(snapshot),
-      ).value;
+        ],
+        theme: _success(ChartThemeDocumentCodec.encode(ChartTheme.light)).value,
+        interaction: _success(
+          ChartInteractionDocumentCodec.encode(const InteractionConfig()),
+        ).value,
+        configuration: configuration,
+        requiredCapabilities: const {
+          'chart.polar.config.v1',
+          'chart.polar.multiple-series.v1',
+          'chart.polar.stacked-series.v1',
+          PolarChartConfig.labelAppearanceCapability,
+          PolarColumnChartSeries.appearanceCapability,
+        },
+      ),
+    );
+    final generated = _success(
+      ChartDartSourceGenerator.generate(snapshot),
+    ).value;
 
-      final fixture = File(
-        '${Directory.current.path}${Platform.pathSeparator}.dart_tool'
-        '${Platform.pathSeparator}polar_generated_source_compile_test.dart',
+    final fixture = File(
+      '${Directory.current.path}${Platform.pathSeparator}.dart_tool'
+      '${Platform.pathSeparator}polar_generated_source_compile_test.dart',
+    );
+    await fixture.writeAsString(
+      '// ignore_for_file: prefer_const_constructors\n${generated.source}',
+    );
+    try {
+      final format = await Process.run(
+        'dart',
+        ['format', '--output=none', fixture.path],
+        workingDirectory: Directory.current.path,
+        runInShell: Platform.isWindows,
       );
-      await fixture.writeAsString(
-        '// ignore_for_file: prefer_const_constructors\n${generated.source}',
-      );
-      try {
-        final format = await Process.run(
-          'dart',
-          ['format', '--output=none', fixture.path],
-          workingDirectory: Directory.current.path,
-          runInShell: Platform.isWindows,
-        );
-        expect(
-          format.exitCode,
-          0,
-          reason: '${format.stdout}\n${format.stderr}',
-        );
+      expect(format.exitCode, 0, reason: '${format.stdout}\n${format.stderr}');
 
-        final analyze = await Process.run(
-          'dart',
-          ['analyze', '--no-fatal-warnings', fixture.path],
-          workingDirectory: Directory.current.path,
-          runInShell: Platform.isWindows,
-        );
-        expect(
-          analyze.exitCode,
-          0,
-          reason: '${analyze.stdout}\n${analyze.stderr}',
-        );
-      } finally {
-        if (await fixture.exists()) await fixture.delete();
-      }
-    },
-    timeout: const Timeout(Duration(minutes: 2)),
-  );
+      final analyze = await Process.run(
+        'dart',
+        ['analyze', '--no-fatal-warnings', fixture.path],
+        workingDirectory: Directory.current.path,
+        runInShell: Platform.isWindows,
+      );
+      expect(
+        analyze.exitCode,
+        0,
+        reason: '${analyze.stdout}\n${analyze.stderr}',
+      );
+    } finally {
+      if (await fixture.exists()) await fixture.delete();
+    }
+  }, timeout: const Timeout(Duration(minutes: 2)));
   test('generated value summary Dart formats, analyzes, and reconstructs a '
       'value-equal config', () async {
     const valueSummary = CartesianValueSummaryConfig(

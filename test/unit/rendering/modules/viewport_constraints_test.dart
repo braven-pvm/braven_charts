@@ -265,6 +265,79 @@ void main() {
     });
 
     group('clampPanDelta', () {
+      for (final transposed in [false, true]) {
+        for (final invertY in [false, true]) {
+          test(
+            'never amplifies or reverses a delta outside the constraint domain '
+            '(transposed=$transposed, invertY=$invertY)',
+            () {
+              final baseline = ChartTransform(
+                dataXMin: 0,
+                dataXMax: 100,
+                dataYMin: 0,
+                dataYMax: 100,
+                plotWidth: 800,
+                plotHeight: 600,
+                transposed: transposed,
+                invertY: invertY,
+              );
+              // A host may fit an overlapping Y domain, or restore a shared
+              // X window, beyond the original constraint baseline.
+              for (final minimum in [-90.0, 140.0]) {
+                final current = baseline.copyWith(
+                  dataXMin: minimum,
+                  dataXMax: minimum + 50,
+                  dataYMin: minimum,
+                  dataYMax: minimum + 50,
+                );
+                for (final dx in [-2.0, 0.0, 2.0]) {
+                  for (final dy in [-2.0, 0.0, 2.0]) {
+                    final result = constraints.clampPanDelta(
+                      requestedPlotDx: dx,
+                      requestedPlotDy: dy,
+                      currentTransform: current,
+                      constraintTransform: baseline,
+                    );
+                    expect(
+                      result.dx,
+                      inInclusiveRange(dx < 0 ? dx : 0, dx > 0 ? dx : 0),
+                    );
+                    expect(
+                      result.dy,
+                      inInclusiveRange(dy < 0 ? dy : 0, dy > 0 ? dy : 0),
+                    );
+                  }
+                }
+              }
+            },
+          );
+        }
+      }
+
+      test(
+        'permits gradual return from a host-restored out-of-bounds window',
+        () {
+          const baseline = ChartTransform(
+            dataXMin: 0,
+            dataXMax: 100,
+            dataYMin: 0,
+            dataYMax: 100,
+            plotWidth: 800,
+            plotHeight: 600,
+            invertY: true,
+          );
+          final current = baseline.copyWith(dataXMin: -90, dataXMax: -40);
+          final result = constraints.clampPanDelta(
+            requestedPlotDx: 2,
+            requestedPlotDy: 0,
+            currentTransform: current,
+            constraintTransform: baseline,
+          );
+          expect(result.dx, closeTo(2, 1e-9));
+          expect(result.dy, 0);
+        },
+      );
+
       ChartTransform createTransform({
         double dataXMin = 0,
         double dataXMax = 100,
